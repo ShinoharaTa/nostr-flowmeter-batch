@@ -1,0 +1,2 @@
+# Nostr Hotter Batch Script
+
