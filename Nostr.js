@@ -1,8 +1,8 @@
 import { currUnixtime } from "./utils.js";
 import { relayInit, finishEvent, getPublicKey } from "nostr-tools";
+import { eventKind, NostrFetcher } from "nostr-fetch";
 import dotenv from "dotenv";
 import "websocket-polyfill";
-import { eventKind, NostrFetcher } from "nostr-fetch";
 
 dotenv.config();
 const { HEX, RELAY } = process.env;
@@ -48,11 +48,11 @@ class NostrBot {
     });
   };
 
-  nip78get = async (item) => {
+  nip78get = async (tableName, tagName) => {
     const result = await fetcher.fetchLastEvent([RELAY], {
       kinds: [eventKind.appSpecificData],
-      "#d": ["nostr-arrival-rate"],
-      "#t": ["nostr-arrival-rate"],
+      "#d": [tableName],
+      "#t": [tagName],
       authors: [getPublicKey(HEX)],
     });
     return result;
