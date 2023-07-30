@@ -12,7 +12,9 @@
     "dotenv": "^16.1.3",
     "node-cron": "^3.0.2",
     "nostr-fetch": "^0.12.1",
+    "nostr-key-value": "^0.2.1",
     "nostr-tools": "1.11.1",
+    "ts-node": "^10.9.1",
     "websocket-polyfill": "^0.0.3"
   }
 }

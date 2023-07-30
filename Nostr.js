@@ -15,7 +15,7 @@ class NostrBot {
   constructor() {
     this.relay = relayInit(RELAY);
     this.relay.on("error", () => {
-      throw "failed to connnect";
+      throw `failed to connect, ${RELAY}`;
     });
     return;
   }
