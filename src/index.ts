@@ -13,12 +13,11 @@ const nostr = new NostrBot();
 nostr.init([{ kinds: [], since: currUnixtime() }]);
 
 console.log("connected to relay");
-// return this.relay.sub(filter);
 
 // 全リレー初期化
 relays.forEach((item) => {
   item.class = new Hotter(item.url);
-  item.class.watch()
+  item.class.watch();
 });
 
 cron.schedule("* * * * *", async () => {
@@ -26,7 +25,7 @@ cron.schedule("* * * * *", async () => {
     for (let i in relays) {
       const relay = relays[i];
       const count = relay.class.getCount();
-      console.log(relay.key, count)
+      console.log(relay.key, count);
       relay.class.clearCount();
       let now = new Date();
       now.setTime(now.getTime() - 60000);

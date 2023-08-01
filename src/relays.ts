@@ -1,4 +1,13 @@
-export const relays = [
+export type Relays = RelayItem[]
+export type RelayItem = {
+  key: string,
+  name: string,
+  status: string,
+  url: string,
+  class: any,
+}
+
+export const relays: Relays = [
   {
     key: "kojira",
     name: "こじら川",
