@@ -7,6 +7,10 @@
   "author": "T.Shinohara",
   "license": "MIT",
   "private": true,
+  "scripts": {
+    "dev": "ts-node /src/index.ts",
+    "build": "tsc"
+  },
   "dependencies": {
     "date-fns": "^2.30.0",
     "dotenv": "^16.1.3",

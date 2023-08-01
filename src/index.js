@@ -18,7 +18,7 @@ console.log("connected to relay");
 // 全リレー初期化
 relays.forEach((item) => {
   item.class = new Hotter(item.url);
-  item.class.watch().catch((e) => console.error(e));
+  item.class.watch()
 });
 
 cron.schedule("* * * * *", async () => {
