@@ -16,27 +16,37 @@ export default class Hotter {
   };
   private relay: Relay;
 
-  constructor(url: string) {
+  public init = async (url: string): Promise<boolean> => {
     this.relay = relayInit(url);
-    this.relay.on("error", () => {
-      throw "failed to connnect";
+    return new Promise((resolve, reject) => {
+      this.relay.on("error", () => {
+        console.log("error");
+        resolve(false);
+      });
+      resolve(true);
     });
-    return;
-  }
+  };
 
   public watch = async () => {
     await this.relay.connect();
     const sub = this.relay.sub([{ kinds: [1], since: currUnixtime() }]);
+    this.relay.on("connect", () => {
+      this.relayStatus.status = true;
+      this.relayStatus.count = 0;
+      this.relayStatus.count_10 = 0;
+      console.log("connect");
+    });
     sub.on("event", (ev) => {
       this.relayStatus.count++;
       this.relayStatus.count_10++;
     });
+    this.relay.on("error", () => {
+      this.relayStatus.status = false;
+      throw "disconnect relay";
+    });
   };
 
-  public getCount = (): RelayStatus => {
-    return this.relayStatus;
-  };
-  public get10Count = (): RelayStatus => {
+  public getStatus = (): RelayStatus => {
     return this.relayStatus;
   };
   public clearCount = (): void => {

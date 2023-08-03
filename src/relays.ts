@@ -1,10 +1,12 @@
+import Hotter from "./hotter";
+
 export type Relays = RelayItem[]
 export type RelayItem = {
   key: string,
   name: string,
   status: string,
   url: string,
-  class: any,
+  class: Hotter,
 }
 
 export const relays: Relays = [
@@ -12,7 +14,7 @@ export const relays: Relays = [
     key: "kojira",
     name: "こじら川",
     status: "active",
-    url: "wss://r.kojira.io",
+    url: "wss://testr.kojira.io",
     class: null,
   },
   {
