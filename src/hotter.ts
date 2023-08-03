@@ -19,7 +19,7 @@ export default class Hotter {
   constructor(url: string) {
     this.relay = relayInit(url);
     this.relay.on("error", () => {
-      throw "failed to connnect";
+      throw "failed to connect";
     });
     return;
   }
