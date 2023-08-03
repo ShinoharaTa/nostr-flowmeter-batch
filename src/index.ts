@@ -34,8 +34,8 @@ cron.schedule("* * * * *", async () => {
         `nostr-arrival-rate_${relay.key}`,
         `nostr-arrival-rate_${relay.key}`
       );
-      const datas = db ? db.tags.slice(3) : [];
-      const records = [...datas, [formattedNow, count.toString()]].slice(-1440);
+      const items = db ? db.tags.slice(3) : [];
+      const records = [...items, [formattedNow, count.toString()]].slice(-1440);
       console.log("records", records);
       nostr.nip78post(
         `nostr-arrival-rate_${relay.key}`,
@@ -48,8 +48,8 @@ cron.schedule("* * * * *", async () => {
         `nostr-arrival-rate_${relay.key}_${formattedDate}`,
         `nostr-arrival-rate_${relay.key}_${formattedDate}`
       );
-      const datas_day = db_day ? db_day.tags.slice(3) : [];
-      const records_day = [...datas_day, [formattedNow, count.toString()]];
+      const items_day = db_day ? db_day.tags.slice(3) : [];
+      const records_day = [...items_day, [formattedNow, count.toString()]];
       console.log("records_day", records_day);
       nostr.nip78post(
         `nostr-arrival-rate_${relay.key}_${formattedDate}`,
