@@ -7,6 +7,9 @@ import { currUnixtime } from "./utils.js";
 import { relayInit } from "nostr-tools";
 import "websocket-polyfill";
 import { startOfMinute, subMinutes, getUnixTime } from "date-fns";
+import axios from "axios";
+import { ChartJSNodeCanvas } from "chartjs-node-canvas";
+import { ChartConfiguration } from "chart.js";
 
 const getCount = async (url: string, span: number): Promise<number | null> => {
   const now = startOfMinute(new Date());
@@ -70,6 +73,100 @@ const submitNostrStorage = async (key: string, url: string) => {
   );
 };
 
+const generateGraph = async (
+  labels: string[],
+  values: number[],
+  title: string
+) => {
+  const canvas = new ChartJSNodeCanvas({
+    width: 1600,
+    height: 800,
+    chartCallback: (ChartJS) => {
+      // ChartJS.defaults.global.elements.rectangle.borderWidth = 2;
+      ChartJS.defaults.elements.bar.borderWidth = 2;
+      ChartJS.defaults.font.size = 24;
+      // ChartJS.defaults.global.defaultFontSize = 24;
+    },
+  });
+
+  const configuration: ChartConfiguration = {
+    type: "bar",
+    data: {
+      labels: labels,
+      datasets: [
+        {
+          label: "",
+          data: values,
+          backgroundColor: "#58B2DC",
+        },
+      ],
+    },
+    options: {
+      indexAxis: "y",
+      responsive: true,
+      plugins: {
+        title: {
+          display: true,
+          text: title,
+        },
+      },
+      scales: {
+        x: {
+          // grid: {
+          //   color: "#ccc",
+          // },
+        },
+        y: {
+          grid: {
+            color: "#ccc",
+          },
+          title: {
+            display: true,
+            text: "流速 (posts / 10min)",
+          },
+        },
+      },
+    },
+    plugins: [
+      {
+        id: "custom_canvas_background_color",
+        beforeDraw: (chart) => {
+          const ctx = chart.canvas.getContext("2d");
+          ctx.save();
+          ctx.globalCompositeOperation = "destination-over";
+          ctx.fillStyle = "#ffffff"; // Background color
+          ctx.fillRect(0, 0, chart.width, chart.height);
+          ctx.restore();
+        },
+      },
+    ],
+  };
+
+  const image = await canvas.renderToBuffer(configuration);
+
+  // Convert image to base64
+  const imageBase64 = image.toString("base64");
+  const IMGUR_CLIENT_ID = "5cd05598d4b9762";
+  try {
+    // POST to Imgur
+    const response = await axios.post(
+      "https://api.imgur.com/3/image",
+      {
+        image: imageBase64,
+      },
+      {
+        headers: {
+          Authorization: `Client-ID ${IMGUR_CLIENT_ID}`,
+        },
+      }
+    );
+    return response.data.data.link;
+  } catch (err) {
+    console.error(err);
+    return "";
+  }
+};
+
 dotenv.config();
 const { HEX, RELAY } = process.env;
 
@@ -86,15 +183,27 @@ cron.schedule("*/10 * * * *", async () => {
     const todayText = format(from, "yyyy/MM/dd");
     const fromText = format(from, "HH:mm");
     const toText = format(to, "HH:mm");
+    const graph = {
+      labels: [] as string[],
+      counts: [] as number[],
+    };
     let text = `■ 流速計測\n`;
     text += `  ${todayText} ${fromText}～${toText}\n\n`;
     for (const relay of relays) {
       const count = await getCount(relay.url, 10);
       const forText = count ? `${count} posts` : "欠測";
       text += `${relay.name}: ${forText} \n`;
+      graph.labels.push(relay.name);
+      graph.counts.push(count ?? NaN);
     }
     text += `\n■ 野洲田川定点観測所\n`;
-    text += `  https://nostr-hotter-site.vercel.app`;
+    text += `  https://nostr-hotter-site.vercel.app\n\n`;
+    const imageUrl = generateGraph(
+      graph.labels,
+      graph.counts,
+      `流速計測 ${todayText} ${fromText}～${toText}`
+    );
+    text += `  ${imageUrl}`;
     nostr.send(text);
   } catch (e) {
     console.log(e);
