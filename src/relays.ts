@@ -1,11 +1,10 @@
-export type Relays = RelayItem[]
+export type Relays = RelayItem[];
 export type RelayItem = {
-  key: string,
-  name: string,
-  status: string,
-  url: string,
-  class: any,
-}
+  key: string;
+  name: string;
+  status: string;
+  url: string;
+};
 
 export const relays: Relays = [
   {
@@ -13,21 +12,24 @@ export const relays: Relays = [
     name: "こじら川",
     status: "active",
     url: "wss://r.kojira.io",
-    class: null,
+  },
+  {
+    key: "shino3",
+    name: "しの川",
+    status: "active",
+    url: "wss://relay-jp.shino3.net",
   },
   {
     key: "yabumi",
     name: "やぶみ川",
     status: "active",
     url: "wss://yabu.me",
-    class: null,
   },
   {
     key: "kirino",
     name: "きりの川",
     status: "active",
     url: "wss://relay-jp.nostr.wirednet.jp",
-    class: null,
   },
   // {
   //   key: "nokotaro",
