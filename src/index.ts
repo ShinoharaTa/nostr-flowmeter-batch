@@ -11,6 +11,12 @@ import axios from "axios";
 import { ChartJSNodeCanvas } from "chartjs-node-canvas";
 import { ChartConfiguration } from "chart.js";
 
+dotenv.config();
+const { IMGUR_CLIENT_ID } = process.env;
+
+const nostr = new NostrBot();
+nostr.init([{ kinds: [], since: currUnixtime() }]);
+
 const getCount = async (url: string, span: number): Promise<number | null> => {
   const now = startOfMinute(new Date());
   const to = getUnixTime(now);
@@ -146,7 +152,7 @@ const generateGraph = async (
 
   // Convert image to base64
   const imageBase64 = image.toString("base64");
-  const IMGUR_CLIENT_ID = "5cd05598d4b9762";
+
   try {
     // POST to Imgur
     const response = await axios.post(
@@ -166,12 +172,6 @@ const generateGraph = async (
     return "";
   }
 };
-
-dotenv.config();
-const { HEX, RELAY } = process.env;
-
-const nostr = new NostrBot();
-nostr.init([{ kinds: [], since: currUnixtime() }]);
 
 cron.schedule("* * * * *", async () => {
   relays.forEach((relay) => submitNostrStorage(relay.key, relay.url));
