@@ -198,7 +198,7 @@ cron.schedule("*/10 * * * *", async () => {
     }
     text += `\n■ 野洲田川定点観測所\n`;
     text += `  https://nostr-hotter-site.vercel.app\n\n`;
-    const imageUrl = generateGraph(
+    const imageUrl = await generateGraph(
       graph.labels,
       graph.counts,
       `流速計測 ${todayText} ${fromText}～${toText}`
