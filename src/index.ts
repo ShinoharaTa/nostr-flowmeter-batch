@@ -190,8 +190,8 @@ cron.schedule("*/10 * * * *", async () => {
       `流速計測 ${todayText} ${fromText}～${toText}`
     );
     text += `  ${imageUrl}`;
-    console.log(imageUrl);
-    // nostr.send(text);
+    // console.log(imageUrl);
+    nostr.send(text);
   } catch (e) {
     console.log(e);
   }
