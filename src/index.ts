@@ -7,14 +7,16 @@ import { currUnixtime } from "./utils.js";
 import { relayInit } from "nostr-tools";
 import "websocket-polyfill";
 import axios from "axios";
-import { ChartConfiguration } from "chart.js";
-import { ChartJSNodeCanvas } from "chartjs-node-canvas";
+import chartPkg from "chart.js";
+import { createCanvas, registerFont } from "canvas";
+const { Chart } = chartPkg;
 
 dotenv.config();
 const { IMGUR_CLIENT_ID } = process.env;
 
 const nostr = new NostrBot();
 nostr.init([{ kinds: [], since: currUnixtime() }]);
+registerFont("./font.ttf", { family: "CustomFont" });
 
 const getCount = async (url: string, span: number): Promise<number | null> => {
   const now = startOfMinute(new Date());
@@ -78,25 +80,15 @@ const submitNostrStorage = async (key: string, url: string) => {
   );
 };
 
-// Chart.register(...registerables);
-// // const fontFile = readFileSync('./LINESeedJP_OTF_Rg.woff');
-
 const generateGraph = async (
   labels: string[],
   values: number[],
   title: string
 ) => {
-  const chartJSNodeCanvas = new ChartJSNodeCanvas({
-    width: 1200,
-    height: 1200,
-    chartCallback: (ChartJS) => {
-      ChartJS.defaults.font.family = "default";
-      ChartJS.defaults.font.size = 42;
-      // ChartJS.defaults.global.defaultFontFamily = "";
-      // ChartJS.defaults.global.defaultFontColor = FONT_COLOR;
-    },
-  });
-  const configuration: ChartConfiguration = {
+  const canvas = createCanvas(1200, 600);
+  const ctx: any = canvas.getContext("2d");
+
+  new Chart(ctx, {
     type: "bar",
     data: {
       labels: labels,
@@ -111,34 +103,46 @@ const generateGraph = async (
     options: {
       indexAxis: "y",
       responsive: true,
+      font: {
+        family: "CustomFont",
+        size: 64,
+      },
       plugins: {
         title: {
           display: true,
           text: title,
+          font: {
+            family: "CustomFont",
+            size: 48,
+          },
+        },
+        legend: {
+          display: false,
         },
       },
       scales: {
-        x: {
-          // grid: {
-          //   color: "#ccc",
-          // },
-        },
         y: {
-          grid: {
-            color: "#ccc",
-          },
           title: {
             display: true,
             text: "流速 (posts / 10min)",
+            font: {
+              family: "CustomFont",
+              size: 28,
+            },
+          },
+          ticks: {
+            font: {
+              family: "CustomFont",
+              size: 48,
+            },
+            padding: 40,
           },
         },
       },
     },
-  };
-
+  });
   // Convert image to base64
-  chartJSNodeCanvas.registerFont("./font.woff", { family: "default" });
-  const image = await chartJSNodeCanvas.renderToBuffer(configuration);
+  const image = canvas.toBuffer();
   const imageBase64 = image.toString("base64");
 
   try {
@@ -156,9 +160,9 @@ const generateGraph = async (
 };
 
 cron.schedule("* * * * *", async () => {
-  // relays.forEach((relay) => submitNostrStorage(relay.key, relay.url));
+  relays.forEach((relay) => submitNostrStorage(relay.key, relay.url));
 });
-cron.schedule("* * * * *", async () => {
+cron.schedule("*/10 * * * *", async () => {
   try {
     const from = subMinutes(startOfMinute(new Date()), 10);
     const to = startOfMinute(new Date());
