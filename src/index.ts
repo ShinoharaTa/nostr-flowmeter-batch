@@ -101,6 +101,7 @@ const generateGraph = async (
       ],
     },
     options: {
+      backgroundColor: "#fff",
       indexAxis: "y",
       responsive: true,
       font: {
@@ -162,7 +163,7 @@ const generateGraph = async (
 cron.schedule("* * * * *", async () => {
   relays.forEach((relay) => submitNostrStorage(relay.key, relay.url));
 });
-cron.schedule("*/10 * * * *", async () => {
+cron.schedule("* * * * *", async () => {
   try {
     const from = subMinutes(startOfMinute(new Date()), 10);
     const to = startOfMinute(new Date());
