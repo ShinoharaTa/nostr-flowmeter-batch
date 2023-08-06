@@ -48,7 +48,7 @@ const getCount = async (url: string, span: number): Promise<number | null> => {
 
 const submitNostrStorage = async (key: string, url: string) => {
   const data = (await getCount(url, 1)) ?? NaN;
-  console.log(key, data);
+  // console.log(key, data);
   const now = subMinutes(startOfMinute(new Date()), 1);
   const formattedNow = format(now, "yyyyMMddHHmm");
   const db = await nostr.nip78get(
@@ -57,7 +57,7 @@ const submitNostrStorage = async (key: string, url: string) => {
   );
   const datas = db ? db.tags.slice(3) : [];
   const records = [...datas, [formattedNow, data.toString()]].slice(-1440);
-  console.log("records", records);
+  // console.log("records", records);
   nostr.nip78post(
     `nostr-arrival-rate_${key}`,
     `nostr-arrival-rate_${key}`,
@@ -71,7 +71,7 @@ const submitNostrStorage = async (key: string, url: string) => {
   );
   const datas_day = db_day ? db_day.tags.slice(3) : [];
   const records_day = [...datas_day, [formattedNow, data.toString()]];
-  console.log("records_day", records_day);
+  // console.log("records_day", records_day);
   nostr.nip78post(
     `nostr-arrival-rate_${key}_${formattedDate}`,
     `nostr-arrival-rate_${key}_${formattedDate}`,
@@ -101,7 +101,6 @@ const generateGraph = async (
       ],
     },
     options: {
-      backgroundColor: "#fff",
       indexAxis: "y",
       responsive: true,
       font: {
@@ -141,6 +140,19 @@ const generateGraph = async (
         },
       },
     },
+    plugins: [
+      {
+        id: "customCanvasBackgroundColor",
+        beforeDraw: (chart, args, options) => {
+          const { ctx } = chart;
+          ctx.save();
+          ctx.globalCompositeOperation = "destination-over";
+          ctx.fillStyle = "#ffffff";
+          ctx.fillRect(0, 0, chart.width, chart.height);
+          ctx.restore();
+        },
+      },
+    ],
   });
   // Convert image to base64
   const image = canvas.toBuffer();
