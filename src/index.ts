@@ -1,15 +1,14 @@
-import dotenv from "dotenv";
+import dotenv, { config } from "dotenv";
 import NostrBot from "./Nostr.js";
 import cron from "node-cron";
-import { format } from "date-fns";
+import { format, startOfMinute, subMinutes, getUnixTime } from "date-fns";
 import { relays } from "./relays.js";
 import { currUnixtime } from "./utils.js";
 import { relayInit } from "nostr-tools";
 import "websocket-polyfill";
-import { startOfMinute, subMinutes, getUnixTime } from "date-fns";
 import axios from "axios";
-import { ChartJSNodeCanvas } from "chartjs-node-canvas";
 import { ChartConfiguration } from "chart.js";
+import { ChartJSNodeCanvas } from "chartjs-node-canvas";
 
 dotenv.config();
 const { IMGUR_CLIENT_ID } = process.env;
@@ -79,22 +78,24 @@ const submitNostrStorage = async (key: string, url: string) => {
   );
 };
 
+// Chart.register(...registerables);
+// // const fontFile = readFileSync('./LINESeedJP_OTF_Rg.woff');
+
 const generateGraph = async (
   labels: string[],
   values: number[],
   title: string
 ) => {
-  const canvas = new ChartJSNodeCanvas({
-    width: 1600,
-    height: 800,
+  const chartJSNodeCanvas = new ChartJSNodeCanvas({
+    width: 1200,
+    height: 1200,
     chartCallback: (ChartJS) => {
-      // ChartJS.defaults.global.elements.rectangle.borderWidth = 2;
-      ChartJS.defaults.elements.bar.borderWidth = 2;
-      ChartJS.defaults.font.size = 24;
-      // ChartJS.defaults.global.defaultFontSize = 24;
+      ChartJS.defaults.font.family = "default";
+      ChartJS.defaults.font.size = 42;
+      // ChartJS.defaults.global.defaultFontFamily = "";
+      // ChartJS.defaults.global.defaultFontColor = FONT_COLOR;
     },
   });
-
   const configuration: ChartConfiguration = {
     type: "bar",
     data: {
@@ -133,38 +134,19 @@ const generateGraph = async (
         },
       },
     },
-    plugins: [
-      {
-        id: "custom_canvas_background_color",
-        beforeDraw: (chart) => {
-          const ctx = chart.canvas.getContext("2d");
-          ctx.save();
-          ctx.globalCompositeOperation = "destination-over";
-          ctx.fillStyle = "#ffffff"; // Background color
-          ctx.fillRect(0, 0, chart.width, chart.height);
-          ctx.restore();
-        },
-      },
-    ],
   };
 
-  const image = await canvas.renderToBuffer(configuration);
-
   // Convert image to base64
+  chartJSNodeCanvas.registerFont("./font.woff", { family: "default" });
+  const image = await chartJSNodeCanvas.renderToBuffer(configuration);
   const imageBase64 = image.toString("base64");
 
   try {
     // POST to Imgur
     const response = await axios.post(
       "https://api.imgur.com/3/image",
-      {
-        image: imageBase64,
-      },
-      {
-        headers: {
-          Authorization: `Client-ID ${IMGUR_CLIENT_ID}`,
-        },
-      }
+      { image: imageBase64 },
+      { headers: { Authorization: `Client-ID ${IMGUR_CLIENT_ID}` } }
     );
     return response.data.data.link;
   } catch (err) {
@@ -174,9 +156,9 @@ const generateGraph = async (
 };
 
 cron.schedule("* * * * *", async () => {
-  relays.forEach((relay) => submitNostrStorage(relay.key, relay.url));
+  // relays.forEach((relay) => submitNostrStorage(relay.key, relay.url));
 });
-cron.schedule("*/10 * * * *", async () => {
+cron.schedule("* * * * *", async () => {
   try {
     const from = subMinutes(startOfMinute(new Date()), 10);
     const to = startOfMinute(new Date());
@@ -204,7 +186,8 @@ cron.schedule("*/10 * * * *", async () => {
       `流速計測 ${todayText} ${fromText}～${toText}`
     );
     text += `  ${imageUrl}`;
-    nostr.send(text);
+    console.log(imageUrl);
+    // nostr.send(text);
   } catch (e) {
     console.log(e);
   }
