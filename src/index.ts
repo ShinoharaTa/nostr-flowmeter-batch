@@ -217,7 +217,7 @@ const postIntervalSpeed = async () => {
 
 // テスト処理実行
 if (MODE_DEV) {
-  // send("test message");
+  send("test message");
   // relays.forEach((relay) => submitNostrStorage(relay.key, relay.url));
 }
 
