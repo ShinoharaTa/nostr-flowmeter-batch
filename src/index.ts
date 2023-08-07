@@ -178,9 +178,9 @@ const generateGraph = async (
 };
 
 cron.schedule("* * * * *", async () => {
-  // relays.forEach((relay) => submitNostrStorage(relay.key, relay.url));
+  relays.forEach((relay) => submitNostrStorage(relay.key, relay.url));
 });
-cron.schedule("* * * * *", async () => {
+cron.schedule("*/10 * * * *", async () => {
   try {
     const from = subMinutes(startOfMinute(new Date()), 10);
     const to = startOfMinute(new Date());
@@ -212,7 +212,7 @@ cron.schedule("* * * * *", async () => {
     );
     text += `  ${imageUrl}`;
     // console.log(imageUrl);
-    // nostr.send(text);
+    nostr.send(text);
   } catch (e) {
     console.log(e);
   }
