@@ -1,7 +1,13 @@
 import dotenv from "dotenv";
 import { nip78get, nip78post, send } from "./Nostr.js";
 import cron from "node-cron";
-import { format, startOfMinute, subMinutes, getUnixTime } from "date-fns";
+import {
+  format,
+  startOfMinute,
+  subMinutes,
+  getUnixTime,
+  fromUnixTime,
+} from "date-fns";
 import { relays } from "./relays.js";
 import { relayInit } from "nostr-tools";
 import "websocket-polyfill";
@@ -17,7 +23,11 @@ dotenv.config();
 const { IMGUR_CLIENT_ID } = process.env;
 registerFont("./font.ttf", { family: "CustomFont" });
 
-const getCount = async (url: string, span: number): Promise<number | null> => {
+interface count {
+  [key: string]: number;
+}
+
+const getCount = async (url: string, span: number): Promise<count | null> => {
   const now = startOfMinute(new Date());
   const to = getUnixTime(now);
   const from = getUnixTime(subMinutes(now, span));
@@ -26,15 +36,16 @@ const getCount = async (url: string, span: number): Promise<number | null> => {
   try {
     const relay = relayInit(url);
     await relay.connect();
-
+    const response: count = {};
     const sub = relay.sub([{ kinds: [1], since: from, until: to }]);
-    sub.on("event", () => {
-      count++;
+    sub.on("event", (ev) => {
+      const key = format(fromUnixTime(ev.created_at), "yyyyMMddHHmm");
+      response[key] = response[key] ? response[key] + 1 : 1;
     });
 
     return new Promise((resolve, reject) => {
       sub.on("eose", () => {
-        resolve(count);
+        resolve(response);
       });
       relay.on("error", () => {
         resolve(null);
@@ -45,8 +56,17 @@ const getCount = async (url: string, span: number): Promise<number | null> => {
   }
 };
 
+function sumValues(obj: count): number {
+  let sum = 0;
+  for (let key in obj) {
+    sum += obj[key];
+  }
+  return sum;
+}
+
 const submitNostrStorage = async (key: string, url: string) => {
-  const data = (await getCount(url, 1)) ?? NaN;
+  const count = await getCount(url, 1);
+  const data = count ? sumValues(count) : NaN;
   const now = subMinutes(startOfMinute(new Date()), 1);
   const formattedNow = format(now, "yyyyMMddHHmm");
   console.log(`${key} ${now} : `, data);
@@ -89,9 +109,10 @@ const generateGraph = async (
   const ctx: any = canvas.getContext("2d");
 
   new Chart(ctx, {
-    type: "bar",
+    type: "line",
     data: {
       labels: labels,
+      // datasets: values,
       datasets: [
         {
           label: "",
@@ -190,7 +211,10 @@ const postIntervalSpeed = async () => {
     let text = `■ 流速計測\n`;
     text += `  ${todayText} ${fromText}～${toText}\n\n`;
     const counts = await Promise.all(
-      relays.map((relay) => getCount(relay.url, 10))
+      relays.map(async (relay) => {
+        const count = await getCount(relay.url, 10);
+        return count ? sumValues(count) : null;
+      })
     );
     relays.forEach((relay, index) => {
       const count = counts[index];
@@ -217,7 +241,7 @@ const postIntervalSpeed = async () => {
 
 // テスト処理実行
 if (MODE_DEV) {
-  send("test message");
+  // send("test message");
   // relays.forEach((relay) => submitNostrStorage(relay.key, relay.url));
 }
 
