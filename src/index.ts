@@ -1,9 +1,8 @@
-import dotenv, { config } from "dotenv";
-import NostrBot from "./Nostr.js";
+import dotenv from "dotenv";
+import { nip78get, nip78post, send } from "./Nostr.js";
 import cron from "node-cron";
 import { format, startOfMinute, subMinutes, getUnixTime } from "date-fns";
 import { relays } from "./relays.js";
-import { currUnixtime } from "./utils.js";
 import { relayInit } from "nostr-tools";
 import "websocket-polyfill";
 import axios from "axios";
@@ -16,9 +15,6 @@ const MODE_DEV = process.argv.includes("--dev");
 
 dotenv.config();
 const { IMGUR_CLIENT_ID } = process.env;
-
-const nostr = new NostrBot();
-nostr.init([{ kinds: [], since: currUnixtime() }]);
 registerFont("./font.ttf", { family: "CustomFont" });
 
 const getCount = async (url: string, span: number): Promise<number | null> => {
@@ -55,28 +51,28 @@ const submitNostrStorage = async (key: string, url: string) => {
   const formattedNow = format(now, "yyyyMMddHHmm");
   console.log(`${key} ${now} : `, data);
   if (MODE_DEV) return;
-  const db = await nostr.nip78get(
+  const db = await nip78get(
     `nostr-arrival-rate_${key}`,
     `nostr-arrival-rate_${key}`
   );
   const datas = db ? db.tags.slice(3) : [];
   const records = [...datas, [formattedNow, data.toString()]].slice(-1440);
   // console.log("records", records);
-  nostr.nip78post(
+  nip78post(
     `nostr-arrival-rate_${key}`,
     `nostr-arrival-rate_${key}`,
     "流速検出 realtime",
     records
   );
   const formattedDate = format(now, "yyyyMMdd");
-  const db_day = await nostr.nip78get(
+  const db_day = await nip78get(
     `nostr-arrival-rate_${key}_${formattedDate}`,
     `nostr-arrival-rate_${key}_${formattedDate}`
   );
   const datas_day = db_day ? db_day.tags.slice(3) : [];
   const records_day = [...datas_day, [formattedNow, data.toString()]];
   // console.log("records_day", records_day);
-  nostr.nip78post(
+  nip78post(
     `nostr-arrival-rate_${key}_${formattedDate}`,
     `nostr-arrival-rate_${key}_${formattedDate}`,
     "流速検出 " + formattedDate,
@@ -212,8 +208,8 @@ const postIntervalSpeed = async () => {
     );
     text += `  ${imageUrl}`;
     console.log(text);
-    // if (MODE_DEV) return;
-    nostr.send(text);
+    if (MODE_DEV) return;
+    send(text);
   } catch (e) {
     console.log(e);
   }
@@ -221,7 +217,8 @@ const postIntervalSpeed = async () => {
 
 // テスト処理実行
 if (MODE_DEV) {
-  postIntervalSpeed();
+  // send("test message");
+  // relays.forEach((relay) => submitNostrStorage(relay.key, relay.url));
 }
 
 // Schedule Batch
