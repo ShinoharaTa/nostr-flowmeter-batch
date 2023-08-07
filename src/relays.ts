@@ -8,6 +8,36 @@ export type RelayItem = {
 
 export const relays: Relays = [
   {
+    key: "kirino",
+    name: "きりの川",
+    status: "active",
+    url: "wss://relay-jp.nostr.wirednet.jp",
+  },
+  {
+    key: "takenoko",
+    name: "のこたろ川",
+    status: "active",
+    url: "wss://nostr-relay.nokotaro.com",
+  },
+  {
+    key: "yabumi",
+    name: "やぶみ川",
+    status: "active",
+    url: "wss://yabu.me",
+  },
+  {
+    key: "holybea",
+    name: "ほりべあ川",
+    status: "active",
+    url: "wss://nostr.holybea.com",
+  },
+  {
+    key: "c-stellar",
+    name: "かすてら川",
+    status: "active",
+    url: "wss://nrelay-jp.c-stellar.net",
+  },
+  {
     key: "kojira",
     name: "こじら川",
     status: "active",
@@ -19,23 +49,4 @@ export const relays: Relays = [
     status: "active",
     url: "wss://relay-jp.shino3.net",
   },
-  {
-    key: "yabumi",
-    name: "やぶみ川",
-    status: "active",
-    url: "wss://yabu.me",
-  },
-  {
-    key: "kirino",
-    name: "きりの川",
-    status: "active",
-    url: "wss://relay-jp.nostr.wirednet.jp",
-  },
-  // {
-  //   key: "nokotaro",
-  //   name: "竹田川",
-  //   status: "active",
-  //   url: "wss://relay-jp.nostr.wirednet.jp",
-  //   class: null,
-  // },
 ];

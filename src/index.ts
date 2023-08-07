@@ -9,6 +9,7 @@ import "websocket-polyfill";
 import axios from "axios";
 import chartPkg from "chart.js";
 import { createCanvas, registerFont } from "canvas";
+import { writeFileSync } from "fs";
 const { Chart } = chartPkg;
 
 dotenv.config();
@@ -105,7 +106,7 @@ const generateGraph = async (
       responsive: true,
       font: {
         family: "CustomFont",
-        size: 64,
+        size: 32,
       },
       plugins: {
         title: {
@@ -113,7 +114,7 @@ const generateGraph = async (
           text: title,
           font: {
             family: "CustomFont",
-            size: 48,
+            size: 32,
           },
         },
         legend: {
@@ -127,7 +128,7 @@ const generateGraph = async (
             text: "流速 (posts / 10min)",
             font: {
               family: "CustomFont",
-              size: 28,
+              size: 32,
             },
           },
           ticks: {
@@ -154,9 +155,13 @@ const generateGraph = async (
       },
     ],
   });
-  // Convert image to base64
+
   const image = canvas.toBuffer();
+  writeFileSync("./chart.png", image);
   const imageBase64 = image.toString("base64");
+
+  // CLIENT_IDなければ画像URLなし
+  if (!IMGUR_CLIENT_ID) return "";
 
   try {
     // POST to Imgur
@@ -173,9 +178,9 @@ const generateGraph = async (
 };
 
 cron.schedule("* * * * *", async () => {
-  relays.forEach((relay) => submitNostrStorage(relay.key, relay.url));
+  // relays.forEach((relay) => submitNostrStorage(relay.key, relay.url));
 });
-cron.schedule("*/10 * * * *", async () => {
+cron.schedule("* * * * *", async () => {
   try {
     const from = subMinutes(startOfMinute(new Date()), 10);
     const to = startOfMinute(new Date());
@@ -188,13 +193,16 @@ cron.schedule("*/10 * * * *", async () => {
     };
     let text = `■ 流速計測\n`;
     text += `  ${todayText} ${fromText}～${toText}\n\n`;
-    for (const relay of relays) {
-      const count = await getCount(relay.url, 10);
+    const counts = await Promise.all(
+      relays.map((relay) => getCount(relay.url, 10))
+    );
+    relays.forEach((relay, index) => {
+      const count = counts[index];
       const forText = count ? `${count} posts` : "欠測";
       text += `${relay.name}: ${forText} \n`;
       graph.labels.push(relay.name);
       graph.counts.push(count ?? NaN);
-    }
+    });
     text += `\n■ 野洲田川定点観測所\n`;
     text += `  https://nostr-hotter-site.vercel.app\n\n`;
     const imageUrl = await generateGraph(
@@ -204,7 +212,7 @@ cron.schedule("*/10 * * * *", async () => {
     );
     text += `  ${imageUrl}`;
     // console.log(imageUrl);
-    nostr.send(text);
+    // nostr.send(text);
   } catch (e) {
     console.log(e);
   }
