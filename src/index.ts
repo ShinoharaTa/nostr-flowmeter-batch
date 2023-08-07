@@ -12,6 +12,8 @@ import { createCanvas, registerFont } from "canvas";
 import { writeFileSync } from "fs";
 const { Chart } = chartPkg;
 
+const MODE_DEV = process.argv.includes("--dev");
+
 dotenv.config();
 const { IMGUR_CLIENT_ID } = process.env;
 
@@ -49,9 +51,10 @@ const getCount = async (url: string, span: number): Promise<number | null> => {
 
 const submitNostrStorage = async (key: string, url: string) => {
   const data = (await getCount(url, 1)) ?? NaN;
-  // console.log(key, data);
   const now = subMinutes(startOfMinute(new Date()), 1);
   const formattedNow = format(now, "yyyyMMddHHmm");
+  console.log(`${key} ${now} : `, data);
+  if (MODE_DEV) return;
   const db = await nostr.nip78get(
     `nostr-arrival-rate_${key}`,
     `nostr-arrival-rate_${key}`
@@ -177,10 +180,7 @@ const generateGraph = async (
   }
 };
 
-cron.schedule("* * * * *", async () => {
-  relays.forEach((relay) => submitNostrStorage(relay.key, relay.url));
-});
-cron.schedule("*/10 * * * *", async () => {
+const postIntervalSpeed = async () => {
   try {
     const from = subMinutes(startOfMinute(new Date()), 10);
     const to = startOfMinute(new Date());
@@ -211,9 +211,25 @@ cron.schedule("*/10 * * * *", async () => {
       `流速計測 ${todayText} ${fromText}～${toText}`
     );
     text += `  ${imageUrl}`;
-    // console.log(imageUrl);
+    console.log(text);
+    // if (MODE_DEV) return;
     nostr.send(text);
   } catch (e) {
     console.log(e);
   }
+};
+
+// テスト処理実行
+if (MODE_DEV) {
+  postIntervalSpeed();
+}
+
+// Schedule Batch
+cron.schedule("* * * * *", async () => {
+  if (MODE_DEV) return;
+  relays.forEach((relay) => submitNostrStorage(relay.key, relay.url));
+});
+cron.schedule("*/10 * * * *", async () => {
+  if (MODE_DEV) return;
+  await postIntervalSpeed();
 });
