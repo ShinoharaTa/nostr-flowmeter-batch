@@ -32,7 +32,6 @@ const getCount = async (url: string, span: number): Promise<count | null> => {
   const to = getUnixTime(now);
   const from = getUnixTime(subMinutes(now, span));
 
-  let count: number = 0;
   try {
     const relay = relayInit(url);
     await relay.connect();
@@ -218,7 +217,7 @@ const postIntervalSpeed = async () => {
     );
     relays.forEach((relay, index) => {
       const count = counts[index];
-      const forText = count ? `${count} posts` : "欠測";
+      const forText = count !== null ? `${count} posts` : "欠測";
       text += `${relay.name}: ${forText} \n`;
       graph.labels.push(relay.name);
       graph.counts.push(count ?? NaN);
