@@ -108,7 +108,7 @@ const generateGraph = async (
   const ctx: any = canvas.getContext("2d");
 
   new Chart(ctx, {
-    type: "line",
+    type: "bar",
     data: {
       labels: labels,
       // datasets: values,
