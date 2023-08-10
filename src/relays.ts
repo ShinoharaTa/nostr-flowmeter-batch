@@ -4,6 +4,7 @@ export type RelayItem = {
   name: string;
   status: string;
   url: string;
+  target: string;
 };
 
 export const relays: Relays = [
@@ -12,41 +13,55 @@ export const relays: Relays = [
     name: "きりの川",
     status: "active",
     url: "wss://relay-jp.nostr.wirednet.jp",
+    target:"jp"
+  },
+  {
+    key: "kirino",
+    name: "きりの川(G)",
+    status: "active",
+    url: "wss://relay.nostr.wirednet.jp",
+    target:"all"
   },
   {
     key: "takenoko",
-    name: "のこたろ川",
+    name: "のこたろ川(G)",
     status: "active",
     url: "wss://nostr-relay.nokotaro.com",
+    target:"all"
   },
   {
     key: "yabumi",
     name: "やぶみ川",
     status: "active",
     url: "wss://yabu.me",
+    target:"jp"
   },
   {
     key: "holybea",
     name: "ほりべあ川",
     status: "active",
     url: "wss://nostr.holybea.com",
+    target:"jp"
   },
   {
     key: "c-stellar",
     name: "かすてら川",
     status: "active",
     url: "wss://nrelay-jp.c-stellar.net",
+    target:"jp"
   },
   {
     key: "kojira",
     name: "こじら川",
     status: "active",
     url: "wss://r.kojira.io",
+    target:"jp"
   },
   {
     key: "shino3",
     name: "しの川",
     status: "active",
     url: "wss://relay-jp.shino3.net",
+    target:"jp"
   },
 ];
