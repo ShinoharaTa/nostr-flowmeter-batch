@@ -16,14 +16,14 @@ export const relays: Relays = [
     target:"jp"
   },
   {
-    key: "kirino",
+    key: "kirino_g",
     name: "きりの川(G)",
     status: "active",
     url: "wss://relay.nostr.wirednet.jp",
     target:"all"
   },
   {
-    key: "takenoko",
+    key: "takenoko_g",
     name: "のこたろ川(G)",
     status: "active",
     url: "wss://nostr-relay.nokotaro.com",
