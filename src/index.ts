@@ -228,15 +228,15 @@ const postIntervalSpeed = async () => {
     const toText = format(to, "HH:mm");
     let text = `■ 流速計測\n`;
     text += `  ${todayText} ${fromText}～${toText}\n\n`;
-    text += "■ JPリレー \n\n";
     const jp = await getPostData(
       relays.filter((relay) => relay.target === "jp")
     );
-    text += "\n■ GLOBAL リレー \n\n";
     const global = await getPostData(
       relays.filter((relay) => relay.target === "all")
     );
+    text += "■ JPリレー \n\n";
     text += jp.text;
+    text += "\n■ GLOBAL リレー \n\n";
     text += global.text;
     text += `\n■ 野洲田川定点観測所\n`;
     text += `  https://nostr-hotter-site.vercel.app\n\n`;
