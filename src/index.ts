@@ -37,7 +37,9 @@ const getCount = async (url: string, span: number): Promise<count | null> => {
     const relay = relayInit(url);
     await relay.connect();
     const response: count = {};
-    const sub = relay.sub([{ kinds: [1], since: from, until: to, limit:100000 }]);
+    const sub = relay.sub([
+      { kinds: [1], since: from, until: to, limit: 1000 },
+    ]);
     sub.on("event", (ev) => {
       const key = format(fromUnixTime(ev.created_at), "yyyyMMddHHmm");
       response[key] = response[key] ? response[key] + 1 : 1;
