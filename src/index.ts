@@ -268,8 +268,8 @@ const postSystemUp = async () => {
     const now = startOfMinute(new Date());
     const nowText = format(now, "yyyy/MM/dd HH:mm");
     let text = `再起動しました\n`;
-    text += `  ${nowText}\n\n`;
-    text += `\n■ 野洲田川定点観測所\n`;
+    text += `  ${nowText}\n`;
+    text += `■ 野洲田川定点観測所\n`;
     text += `  https://nostr-hotter-site.vercel.app\n\n`;
     console.log(text);
     send(text);
@@ -296,7 +296,8 @@ cron.schedule("*/10 * * * *", async () => {
   if (MODE_DEV) return;
   await postIntervalSpeed();
 });
-cron.schedule("32 5 * * *", async () => {
+cron.schedule("46 5 * * *", async () => {
   if (MODE_DEV) return;
+  console.log("restart");
   process.exit();
 });
