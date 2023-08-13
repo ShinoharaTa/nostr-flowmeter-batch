@@ -19,6 +19,7 @@ import { writeFileSync } from "fs";
 const { Chart } = chartPkg;
 
 const MODE_DEV = process.argv.includes("--dev");
+const MIGRATE = process.argv.includes("--migrate");
 
 dotenv.config();
 const { IMGUR_CLIENT_ID } = process.env;
@@ -236,9 +237,9 @@ const postIntervalSpeed = async () => {
     const global = await getPostData(
       relays.filter((relay) => relay.target === "all")
     );
-    text += "■ JPリレー \n\n";
+    text += "[JP リレー]\n";
     text += jp.text;
-    text += "\n■ GLOBAL リレー \n\n";
+    text += "\n[GLOBAL リレー]\n";
     text += global.text;
     text += `\n■ 野洲田川定点観測所\n`;
     text += `  https://nostr-hotter-site.vercel.app\n\n`;
@@ -262,11 +263,28 @@ const postIntervalSpeed = async () => {
   }
 };
 
+const postSystemUp = async () => {
+  try {
+    const now = startOfMinute(new Date());
+    const nowText = format(now, "yyyy/MM/dd HH:mm");
+    let text = `再起動しました\n`;
+    text += `  ${nowText}\n\n`;
+    text += `\n■ 野洲田川定点観測所\n`;
+    text += `  https://nostr-hotter-site.vercel.app\n\n`;
+    console.log(text);
+    send(text);
+  } catch (e) {
+    console.log(e);
+  }
+};
+
 // テスト処理実行
 if (MODE_DEV) {
   // send("test message");
   // relays.forEach((relay) => submitNostrStorage(relay.key, relay.url));
   await postIntervalSpeed();
+} else {
+  await postSystemUp();
 }
 
 // Schedule Batch
@@ -277,4 +295,8 @@ cron.schedule("* * * * *", async () => {
 cron.schedule("*/10 * * * *", async () => {
   if (MODE_DEV) return;
   await postIntervalSpeed();
+});
+cron.schedule("32 5 * * *", async () => {
+  if (MODE_DEV) return;
+  process.exit();
 });
