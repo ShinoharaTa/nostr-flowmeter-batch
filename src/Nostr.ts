@@ -36,7 +36,8 @@ export const send = async (
   const post = finishEvent(ev, HEX);
   return new Promise(() => {
     const pub = pool.publish(RELAYS, post);
-    pub.on("failed", () => {
+    pub.on("failed", (ev) => {
+      console.log(ev);
       console.log("failed to send event");
     });
   });
