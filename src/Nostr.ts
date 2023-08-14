@@ -13,7 +13,7 @@ const RELAYS = [
   "wss://relay-jp.nostr.wirednet.jp",
   "wss://r.kojira.io",
   "wss://yabu.me",
-  "wss://nostr-relay.nokotaro.com",
+  "wss://relay-jp.shino3.net",
 ];
 
 const pool = new SimplePool();
@@ -37,8 +37,7 @@ export const send = async (
   return new Promise(() => {
     const pub = pool.publish(RELAYS, post);
     pub.on("failed", (ev) => {
-      console.log(ev);
-      console.log("failed to send event");
+      console.error("failed to send event", ev);
     });
   });
 };
@@ -73,7 +72,7 @@ export const nip78post = async (
   };
   const post = finishEvent(ev, HEX);
   const pub = pool.publish(RELAYS, post);
-  pub.on("failed", () => {
-    console.log("failed to send event");
+  pub.on("failed", (ev) => {
+    console.error("failed to send event", ev);
   });
 };

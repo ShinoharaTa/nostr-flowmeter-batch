@@ -72,7 +72,6 @@ const submitNostrStorage = async (key: string, url: string) => {
   const data = count ? sumValues(count) : NaN;
   const now = subMinutes(startOfMinute(new Date()), 1);
   const formattedNow = format(now, "yyyyMMddHHmm");
-  console.log(`${key} ${now} : `, data);
   if (MODE_DEV) return;
   const db = await nip78get(
     `nostr-arrival-rate_${key}`,
@@ -80,7 +79,6 @@ const submitNostrStorage = async (key: string, url: string) => {
   );
   const datas = db ? db.tags.slice(3) : [];
   const records = [...datas, [formattedNow, data.toString()]].slice(-1440);
-  // console.log("records", records);
   nip78post(
     `nostr-arrival-rate_${key}`,
     `nostr-arrival-rate_${key}`,
@@ -94,13 +92,13 @@ const submitNostrStorage = async (key: string, url: string) => {
   );
   const datas_day = db_day ? db_day.tags.slice(3) : [];
   const records_day = [...datas_day, [formattedNow, data.toString()]];
-  // console.log("records_day", records_day);
   nip78post(
     `nostr-arrival-rate_${key}_${formattedDate}`,
     `nostr-arrival-rate_${key}_${formattedDate}`,
     "流速検出 " + formattedDate,
     records_day
   );
+  console.log(`[INFO]: ${now} Count Complete.`);
 };
 
 const generateGraph = async (
@@ -254,12 +252,10 @@ const postIntervalSpeed = async () => {
       global.graph.counts,
       `流速計測 ${todayText} ${fromText}～${toText}`
     );
-    // text += `\n\n`;
-    console.log(text);
     if (MODE_DEV) return;
     send(text);
   } catch (e) {
-    console.log(e);
+    console.error(e);
   }
 };
 
@@ -271,10 +267,9 @@ const postSystemUp = async () => {
     text += `  ${nowText}\n`;
     text += `■ 野洲田川定点観測所\n`;
     text += `  https://nostr-hotter-site.vercel.app\n\n`;
-    console.log(text);
     send(text);
   } catch (e) {
-    console.log(e);
+    console.error(e);
   }
 };
 
