@@ -67,18 +67,21 @@ function sumValues(obj: count): number {
   return sum;
 }
 
-const submitNostrStorage = async (key: string, url: string) => {
+const submitNostrStorage = async (
+  key: string,
+  url: string
+): Promise<string[][]> => {
   const count = await getCount(url, 1);
   const data = count ? sumValues(count) : NaN;
   const now = subMinutes(startOfMinute(new Date()), 1);
   const formattedNow = format(now, "yyyyMMddHHmm");
-  if (MODE_DEV) return;
   const db = await nip78get(
     `nostr-arrival-rate_${key}`,
     `nostr-arrival-rate_${key}`
   );
   const datas = db ? db.tags.slice(3) : [];
   const records = [...datas, [formattedNow, data.toString()]].slice(-1440);
+  if (MODE_DEV) return records.slice(-10);
   nip78post(
     `nostr-arrival-rate_${key}`,
     `nostr-arrival-rate_${key}`,
@@ -99,6 +102,7 @@ const submitNostrStorage = async (key: string, url: string) => {
     records_day
   );
   console.log(`[INFO]: ${now} Count Complete.`);
+  return records.slice(-10);
 };
 
 const generateGraph = async (
@@ -277,7 +281,7 @@ const postSystemUp = async () => {
 if (MODE_DEV) {
   // send("test message");
   // relays.forEach((relay) => submitNostrStorage(relay.key, relay.url));
-  await postIntervalSpeed();
+  // await postIntervalSpeed();
 } else {
   await postSystemUp();
 }
@@ -285,7 +289,32 @@ if (MODE_DEV) {
 // Schedule Batch
 cron.schedule("* * * * *", async () => {
   if (MODE_DEV) return;
-  relays.forEach((relay) => submitNostrStorage(relay.key, relay.url));
+  // relays.forEach((relay) => submitNostrStorage(relay.key, relay.url));
+  const countData = await Promise.all(
+    relays.map(async (relay) => {
+      const items = await submitNostrStorage(relay.key, relay.url);
+      if (items) {
+        const result = items.map((item) => Number(item[1]));
+        return result;
+      }
+      return [null];
+    })
+  );
+  const values: string[][] = [];
+  values.push(["updated_at", format(new Date(), "yyyyMMddhhmm")]);
+  relays.forEach((relay, index) => {
+    const status = {
+      status: !!countData[index].slice(-1)[0],
+      count: countData[index],
+    };
+    values.push([relay.key, JSON.stringify(status)]);
+  });
+  nip78post(
+    `relay_health_status`,
+    `relay_health_status`,
+    "流速検出 realtime",
+    values
+  );
 });
 cron.schedule("*/10 * * * *", async () => {
   if (MODE_DEV) return;
