@@ -275,9 +275,6 @@ const postSystemUp = async () => {
 
 // テスト処理実行
 if (MODE_DEV) {
-  // send("test message");
-  // relays.forEach((relay) => submitNostrStorage(relay.key, relay.url));
-  // await postIntervalSpeed();
   // await getCount("wss://r.kojira.io", 1);
 } else {
   await postSystemUp();
