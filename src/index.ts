@@ -16,6 +16,8 @@ import axios from "axios";
 import chartPkg from "chart.js";
 import { createCanvas, registerFont } from "canvas";
 import { writeFileSync } from "fs";
+import { eventKind, NostrFetcher } from "nostr-fetch";
+
 const { Chart } = chartPkg;
 
 const MODE_DEV = process.argv.includes("--dev");
@@ -35,25 +37,19 @@ const getCount = async (url: string, span: number): Promise<count | null> => {
   const from = getUnixTime(subMinutes(now, span));
 
   try {
-    const relay = relayInit(url);
-    await relay.connect();
+    const fetcher = NostrFetcher.init();
     const response: count = {};
-    const sub = relay.sub([
-      { kinds: [1], since: from, until: to, limit: 1000 },
-    ]);
-    sub.on("event", (ev) => {
-      const key = format(fromUnixTime(ev.created_at), "yyyyMMddHHmm");
+    const allPosts = await fetcher.fetchAllEvents(
+      [url],
+      { kinds: [eventKind.text] },
+      { since: from, until: to },
+      { sort: true }
+    );
+    for (const post of allPosts) {
+      const key = format(fromUnixTime(post.created_at), "yyyyMMddHHmm");
       response[key] = response[key] ? response[key] + 1 : 1;
-    });
-
-    return new Promise((resolve, reject) => {
-      sub.on("eose", () => {
-        resolve(response);
-      });
-      relay.on("error", () => {
-        resolve(null);
-      });
-    });
+    }
+    return response;
   } catch (ex) {
     return Promise.resolve(null);
   }
@@ -282,6 +278,7 @@ if (MODE_DEV) {
   // send("test message");
   // relays.forEach((relay) => submitNostrStorage(relay.key, relay.url));
   // await postIntervalSpeed();
+  // await getCount("wss://r.kojira.io", 1);
 } else {
   await postSystemUp();
 }
