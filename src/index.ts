@@ -17,6 +17,7 @@ import chartPkg from "chart.js";
 import { createCanvas, registerFont } from "canvas";
 import { writeFileSync } from "fs";
 import { eventKind, NostrFetcher } from "nostr-fetch";
+import { logger } from "./log.js";
 
 const { Chart } = chartPkg;
 
@@ -45,6 +46,7 @@ const getCount = async (url: string, span: number): Promise<count | null> => {
       { since: from, until: to },
       { sort: true }
     );
+    fetcher.shutdown();
     for (const post of allPosts) {
       const key = format(fromUnixTime(post.created_at), "yyyyMMddHHmm");
       response[key] = response[key] ? response[key] + 1 : 1;
@@ -97,7 +99,7 @@ const submitNostrStorage = async (
     "流速検出 " + formattedDate,
     records_day
   );
-  console.log(`[INFO]: ${now} Count Complete.`);
+  logger("INFO", `Count Complete.`)
   return records.slice(-10);
 };
 
@@ -193,7 +195,7 @@ const generateGraph = async (
     );
     return response.data.data.link;
   } catch (err) {
-    console.error(err);
+    logger("ERROR", err)
     return "";
   }
 };
@@ -255,7 +257,7 @@ const postIntervalSpeed = async () => {
     if (MODE_DEV) return;
     send(text);
   } catch (e) {
-    console.error(e);
+    logger("ERORR", e)
   }
 };
 
@@ -269,13 +271,14 @@ const postSystemUp = async () => {
     text += `  https://nostr-hotter-site.vercel.app\n\n`;
     send(text);
   } catch (e) {
-    console.error(e);
+    logger("ERORR", e)
   }
 };
 
 // テスト処理実行
 if (MODE_DEV) {
-  // await getCount("wss://r.kojira.io", 1);
+  await getCount("wss://r.kojira.io", 1);
+  await postIntervalSpeed();
 } else {
   await postSystemUp();
 }
@@ -283,7 +286,6 @@ if (MODE_DEV) {
 // Schedule Batch
 cron.schedule("* * * * *", async () => {
   if (MODE_DEV) return;
-  // relays.forEach((relay) => submitNostrStorage(relay.key, relay.url));
   const countData = await Promise.all(
     relays.map(async (relay) => {
       const items = await submitNostrStorage(relay.key, relay.url);
@@ -316,6 +318,6 @@ cron.schedule("*/10 * * * *", async () => {
 });
 cron.schedule("46 5 * * *", async () => {
   if (MODE_DEV) return;
-  console.log("restart");
+  logger("INFO", `RESTART`)
   process.exit();
 });
