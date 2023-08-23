@@ -16,7 +16,7 @@ import axios from "axios";
 import chartPkg from "chart.js";
 import { createCanvas, registerFont } from "canvas";
 import { writeFileSync } from "fs";
-import { eventKind, NostrFetcher } from "nostr-fetch";
+import { eventKind, FetchStats, NostrFetcher } from "nostr-fetch";
 import { logger } from "./log.js";
 
 const { Chart } = chartPkg;
@@ -32,26 +32,34 @@ interface count {
   [key: string]: number;
 }
 
-const getCount = async (url: string, span: number): Promise<count> => {
+const getCount = async (url: string, span: number): Promise<count | null> => {
   const now = startOfMinute(new Date());
   const to = getUnixTime(now);
   const from = getUnixTime(subMinutes(now, span));
 
   const fetcher = NostrFetcher.init();
   const response: count = {};
+  let fetchStats: FetchStats | undefined = undefined;
+  const relay_url = url.endsWith('/') ? url : url + '/';
   const allPosts = await fetcher.fetchAllEvents(
-    [url],
+    [relay_url],
     { kinds: [eventKind.text] },
     { since: from, until: to },
-    { sort: true }
+    {
+      sort: true,
+      statsListener: (stats) => {
+        fetchStats = stats;
+      },
+    }
   );
-  console.log(allPosts)
   fetcher.shutdown();
-  for (const post of allPosts) {
-    const key = format(fromUnixTime(post.created_at), "yyyyMMddHHmm");
-    response[key] = response[key] ? response[key] + 1 : 1;
+  if(fetchStats.relays[relay_url]){
+    for (const post of allPosts) {
+      const key = format(fromUnixTime(post.created_at), "yyyyMMddHHmm");
+      response[key] = response[key] ? response[key] + 1 : 1;
+    }
   }
-  return response;
+  return fetchStats.relays[relay_url] ? response : null;
 };
 
 function sumValues(obj: count): number {
@@ -205,7 +213,7 @@ const getPostData = async (relays: Relays) => {
   const counts = await Promise.all(
     relays.map(async (relay) => {
       const count = await getCount(relay.url, 10);
-      return sumValues(count);
+      return count ? sumValues(count) : null;
     })
   );
   let text = "";
