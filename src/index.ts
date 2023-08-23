@@ -32,29 +32,26 @@ interface count {
   [key: string]: number;
 }
 
-const getCount = async (url: string, span: number): Promise<count | null> => {
+const getCount = async (url: string, span: number): Promise<count> => {
   const now = startOfMinute(new Date());
   const to = getUnixTime(now);
   const from = getUnixTime(subMinutes(now, span));
 
-  try {
-    const fetcher = NostrFetcher.init();
-    const response: count = {};
-    const allPosts = await fetcher.fetchAllEvents(
-      [url],
-      { kinds: [eventKind.text] },
-      { since: from, until: to },
-      { sort: true }
-    );
-    fetcher.shutdown();
-    for (const post of allPosts) {
-      const key = format(fromUnixTime(post.created_at), "yyyyMMddHHmm");
-      response[key] = response[key] ? response[key] + 1 : 1;
-    }
-    return response;
-  } catch (ex) {
-    return Promise.resolve(null);
+  const fetcher = NostrFetcher.init();
+  const response: count = {};
+  const allPosts = await fetcher.fetchAllEvents(
+    [url],
+    { kinds: [eventKind.text] },
+    { since: from, until: to },
+    { sort: true }
+  );
+  console.log(allPosts)
+  fetcher.shutdown();
+  for (const post of allPosts) {
+    const key = format(fromUnixTime(post.created_at), "yyyyMMddHHmm");
+    response[key] = response[key] ? response[key] + 1 : 1;
   }
+  return response;
 };
 
 function sumValues(obj: count): number {
@@ -99,7 +96,7 @@ const submitNostrStorage = async (
     "流速検出 " + formattedDate,
     records_day
   );
-  logger("INFO", `Count Complete.`)
+  logger("INFO", `Count Complete.`);
   return records.slice(-10);
 };
 
@@ -195,7 +192,7 @@ const generateGraph = async (
     );
     return response.data.data.link;
   } catch (err) {
-    logger("ERROR", err)
+    logger("ERROR", err);
     return "";
   }
 };
@@ -208,7 +205,7 @@ const getPostData = async (relays: Relays) => {
   const counts = await Promise.all(
     relays.map(async (relay) => {
       const count = await getCount(relay.url, 10);
-      return count ? sumValues(count) : null;
+      return sumValues(count);
     })
   );
   let text = "";
@@ -257,7 +254,7 @@ const postIntervalSpeed = async () => {
     if (MODE_DEV) return;
     send(text);
   } catch (e) {
-    logger("ERORR", e)
+    logger("ERORR", e);
   }
 };
 
@@ -271,14 +268,16 @@ const postSystemUp = async () => {
     text += `  https://nostr-hotter-site.vercel.app\n\n`;
     send(text);
   } catch (e) {
-    logger("ERORR", e)
+    logger("ERORR", e);
   }
 };
 
 // テスト処理実行
 if (MODE_DEV) {
-  await getCount("wss://r.kojira.io", 1);
-  await postIntervalSpeed();
+  const result = await getCount("wss://r1234567.kojira.io", 1);
+  // const result = await getCount("wss://r.kojira.io", 1);
+  console.log(result);
+  // await postIntervalSpeed();
 } else {
   await postSystemUp();
 }
@@ -318,6 +317,6 @@ cron.schedule("*/10 * * * *", async () => {
 });
 cron.schedule("46 5 * * *", async () => {
   if (MODE_DEV) return;
-  logger("INFO", `RESTART`)
+  logger("INFO", `RESTART`);
   process.exit();
 });
