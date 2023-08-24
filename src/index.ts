@@ -40,7 +40,7 @@ const getCount = async (url: string, span: number): Promise<count | null> => {
   const fetcher = NostrFetcher.init();
   const response: count = {};
   let fetchStats: FetchStats | undefined = undefined;
-  const relay_url = url.endsWith('/') ? url : url + '/';
+  const relay_url = url.endsWith("/") ? url : url + "/";
   const allPosts = await fetcher.fetchAllEvents(
     [relay_url],
     { kinds: [eventKind.text] },
@@ -53,13 +53,15 @@ const getCount = async (url: string, span: number): Promise<count | null> => {
     }
   );
   fetcher.shutdown();
-  if(fetchStats.relays[relay_url]){
+  console.log(fetchStats.relays);
+  const resultStatus = fetchStats.relays[relay_url]?.status === "completed";
+  if (resultStatus) {
     for (const post of allPosts) {
       const key = format(fromUnixTime(post.created_at), "yyyyMMddHHmm");
       response[key] = response[key] ? response[key] + 1 : 1;
     }
   }
-  return fetchStats.relays[relay_url] ? response : null;
+  return resultStatus ? response : null;
 };
 
 function sumValues(obj: count): number {
@@ -212,7 +214,7 @@ const getPostData = async (relays: Relays) => {
   };
   const counts = await Promise.all(
     relays.map(async (relay) => {
-      const count = await getCount(relay.url, 10);
+      const count = await getCount(relay.url, 30);
       return count ? sumValues(count) : null;
     })
   );
@@ -259,6 +261,7 @@ const postIntervalSpeed = async () => {
       global.graph.counts,
       `流速計測 ${todayText} ${fromText}～${toText}`
     );
+    console.log(text);
     if (MODE_DEV) return;
     send(text);
   } catch (e) {
@@ -282,10 +285,10 @@ const postSystemUp = async () => {
 
 // テスト処理実行
 if (MODE_DEV) {
-  const result = await getCount("wss://r1234567.kojira.io", 1);
-  // const result = await getCount("wss://r.kojira.io", 1);
-  console.log(result);
-  // await postIntervalSpeed();
+  // const result = await getCount("wss://r1234567.kojira.io", 1);
+  // const result = await getCount("wss://r.kojira.io", 10);
+  // console.log(result);
+  await postIntervalSpeed();
 } else {
   await postSystemUp();
 }
