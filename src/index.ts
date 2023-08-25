@@ -1,17 +1,11 @@
 import dotenv from "dotenv";
 import { nip78get, nip78post, send } from "./Nostr.js";
 import cron from "node-cron";
-import {
-  format,
-  startOfMinute,
-  subMinutes,
-  getUnixTime,
-  fromUnixTime,
-} from "date-fns";
+import { format, startOfMinute, subMinutes, getUnixTime } from "date-fns";
 import { relays } from "./relays.js";
 import type { Relays } from "./relays.js";
-import { relayInit } from "nostr-tools";
-import "websocket-polyfill";
+// import { relayInit } from "nostr-tools";
+// import "websocket-polyfill";
 import axios from "axios";
 import chartPkg from "chart.js";
 import { createCanvas, registerFont } from "canvas";
@@ -32,7 +26,10 @@ interface count {
   [key: string]: number;
 }
 
-const getCount = async (url: string, span: number): Promise<count | null> => {
+const getCount = async (
+  urls: string[],
+  span: number
+): Promise<count | null> => {
   const now = startOfMinute(new Date());
   const to = getUnixTime(now);
   const from = getUnixTime(subMinutes(now, span));
@@ -40,9 +37,9 @@ const getCount = async (url: string, span: number): Promise<count | null> => {
   const fetcher = NostrFetcher.init();
   const response: count = {};
   let fetchStats: FetchStats | undefined = undefined;
-  const relay_url = url.endsWith("/") ? url : url + "/";
-  const allPosts = await fetcher.fetchAllEvents(
-    [relay_url],
+
+  await fetcher.fetchAllEvents(
+    urls,
     { kinds: [eventKind.text] },
     { since: from, until: to },
     {
@@ -53,31 +50,20 @@ const getCount = async (url: string, span: number): Promise<count | null> => {
     }
   );
   fetcher.shutdown();
-  console.log(fetchStats.relays);
-  const resultStatus = fetchStats.relays[relay_url]?.status === "completed";
-  if (resultStatus) {
-    for (const post of allPosts) {
-      const key = format(fromUnixTime(post.created_at), "yyyyMMddHHmm");
-      response[key] = response[key] ? response[key] + 1 : 1;
-    }
-  }
-  return resultStatus ? response : null;
+  urls.forEach((url) => {
+    const relay_url = url.endsWith("/") ? url : url + "/";
+    const resultStatus = fetchStats.relays[relay_url]?.status === "completed";
+    response[url] = resultStatus
+      ? fetchStats.relays[relay_url].numFetchedEvents
+      : null;
+  });
+  return response;
 };
-
-function sumValues(obj: count): number {
-  let sum = 0;
-  for (let key in obj) {
-    sum += obj[key];
-  }
-  return sum;
-}
 
 const submitNostrStorage = async (
   key: string,
-  url: string
+  count: number
 ): Promise<string[][]> => {
-  const count = await getCount(url, 1);
-  const data = count ? sumValues(count) : NaN;
   const now = subMinutes(startOfMinute(new Date()), 1);
   const formattedNow = format(now, "yyyyMMddHHmm");
   const db = await nip78get(
@@ -85,7 +71,7 @@ const submitNostrStorage = async (
     `nostr-arrival-rate_${key}`
   );
   const datas = db ? db.tags.slice(3) : [];
-  const records = [...datas, [formattedNow, data.toString()]].slice(-1440);
+  const records = [...datas, [formattedNow, count.toString()]].slice(-1440);
   if (MODE_DEV) return records.slice(-10);
   nip78post(
     `nostr-arrival-rate_${key}`,
@@ -99,7 +85,7 @@ const submitNostrStorage = async (
     `nostr-arrival-rate_${key}_${formattedDate}`
   );
   const datas_day = db_day ? db_day.tags.slice(3) : [];
-  const records_day = [...datas_day, [formattedNow, data.toString()]];
+  const records_day = [...datas_day, [formattedNow, count.toString()]];
   nip78post(
     `nostr-arrival-rate_${key}_${formattedDate}`,
     `nostr-arrival-rate_${key}_${formattedDate}`,
@@ -207,29 +193,26 @@ const generateGraph = async (
   }
 };
 
-const getPostData = async (relays: Relays) => {
+const getPostData = async (relays: Relays, span: number) => {
   const graph = {
     labels: [] as string[],
     counts: [] as number[],
   };
-  const counts = await Promise.all(
-    relays.map(async (relay) => {
-      const count = await getCount(relay.url, 30);
-      return count ? sumValues(count) : null;
-    })
-  );
+  const relayUrls: string[] = [];
+  for (const relay of relays) relayUrls.push(relay.url);
+  const result = await getCount(relayUrls, span);
   let text = "";
-  relays.forEach((relay, index) => {
-    const count = counts[index];
+  relays.forEach((relay) => {
+    const count = result[relay.url];
     const forText = count !== null ? `${count} posts` : "欠測";
     text += `${relay.name}: ${forText} \n`;
     graph.labels.push(relay.name);
     graph.counts.push(count ?? NaN);
   });
-  return { counts, text, graph };
+  return { text, graph };
 };
 
-const postIntervalSpeed = async () => {
+const postIntervalSpeed = async (span: number) => {
   try {
     const from = subMinutes(startOfMinute(new Date()), 10);
     const to = startOfMinute(new Date());
@@ -239,10 +222,12 @@ const postIntervalSpeed = async () => {
     let text = `■ 流速計測\n`;
     text += `  ${todayText} ${fromText}～${toText}\n\n`;
     const jp = await getPostData(
-      relays.filter((relay) => relay.target === "jp")
+      relays.filter((relay) => relay.target === "jp"),
+      span
     );
     const global = await getPostData(
-      relays.filter((relay) => relay.target === "all")
+      relays.filter((relay) => relay.target === "all"),
+      span
     );
     text += "[JP リレー]\n";
     text += jp.text;
@@ -288,7 +273,7 @@ if (MODE_DEV) {
   // const result = await getCount("wss://r1234567.kojira.io", 1);
   // const result = await getCount("wss://r.kojira.io", 10);
   // console.log(result);
-  await postIntervalSpeed();
+  await postIntervalSpeed(10);
 } else {
   await postSystemUp();
 }
@@ -296,9 +281,13 @@ if (MODE_DEV) {
 // Schedule Batch
 cron.schedule("* * * * *", async () => {
   if (MODE_DEV) return;
+  const relayUrls: string[] = [];
+  for (const relay of relays) relayUrls.push(relay.url);
+  const result = await getCount(relayUrls, 1);
   const countData = await Promise.all(
     relays.map(async (relay) => {
-      const items = await submitNostrStorage(relay.key, relay.url);
+      const count = result[relay.url] ?? NaN;
+      const items = await submitNostrStorage(relay.key, count);
       if (items) {
         const result = items.map((item) => Number(item[1]));
         return result;
@@ -324,7 +313,7 @@ cron.schedule("* * * * *", async () => {
 });
 cron.schedule("*/10 * * * *", async () => {
   if (MODE_DEV) return;
-  await postIntervalSpeed();
+  await postIntervalSpeed(10);
 });
 cron.schedule("46 5 * * *", async () => {
   if (MODE_DEV) return;
