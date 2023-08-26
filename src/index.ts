@@ -315,7 +315,7 @@ cron.schedule("*/10 * * * *", async () => {
   if (MODE_DEV) return;
   await postIntervalSpeed(10);
 });
-cron.schedule("46 5 * * *", async () => {
+cron.schedule("46 5,11,17,23 * * *", async () => {
   if (MODE_DEV) return;
   logger("INFO", `RESTART`);
   process.exit();
