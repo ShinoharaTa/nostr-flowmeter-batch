@@ -66,7 +66,7 @@ const getCount = async (
       const result = await new Promise ((resolve) => {
         try {
           const sub = relay.sub([
-            { kinds: [eventKind.text], since: from, until: to },
+            { kinds: [eventKind.text], since: from, until: to, limit: 10000 },
           ]);
           sub.on("event", () => {
             event++;
