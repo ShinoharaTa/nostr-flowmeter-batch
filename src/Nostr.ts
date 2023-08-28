@@ -1,5 +1,5 @@
 import { currUnixtime } from "./utils.js";
-import { finishEvent, getPublicKey, SimplePool } from "nostr-tools";
+import { finishEvent, getPublicKey, Kind, SimplePool } from "nostr-tools";
 import type { Event } from "nostr-tools";
 import { eventKind, NostrFetcher } from "nostr-fetch";
 import dotenv from "dotenv";
@@ -43,7 +43,13 @@ export const send = async (
 };
 
 export const nip78get = async (tableName: string, tagName: string) => {
-  const result = await fetcher.fetchLastEvent(RELAYS, {
+  // const result = await fetcher.fetchLastEvent(RELAYS, {
+  //   kinds: [eventKind.appSpecificData],
+  //   "#d": [tableName],
+  //   "#t": [tagName],
+  //   authors: [getPublicKey(HEX)],
+  // });
+  const result = await pool.get(RELAYS, {
     kinds: [eventKind.appSpecificData],
     "#d": [tableName],
     "#t": [tagName],
