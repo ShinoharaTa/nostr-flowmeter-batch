@@ -256,14 +256,14 @@ const postIntervalSpeed = async (span: number) => {
       relays.filter((relay) => relay.target === "jp"),
       span
     );
-    // const global = await getPostData(
-    //   relays.filter((relay) => relay.target === "all"),
-    //   span
-    // );
+    const global = await getPostData(
+      relays.filter((relay) => relay.target === "all"),
+      span
+    );
     text += "[JP リレー]\n";
     text += jp.text;
-    // text += "\n[GLOBAL リレー]\n";
-    // text += global.text;
+    text += "\n[GLOBAL リレー]\n";
+    text += global.text;
     text += `\n■ 野洲田川定点観測所\n`;
     text += `  https://nostr-hotter-site.vercel.app\n\n`;
     text += await generateGraph(
@@ -271,12 +271,12 @@ const postIntervalSpeed = async (span: number) => {
       jp.graph.counts,
       `流速計測 ${todayText} ${fromText}～${toText}`
     );
-    // text += `\n`;
-    // text += await generateGraph(
-    //   global.graph.labels,
-    //   global.graph.counts,
-    //   `流速計測 ${todayText} ${fromText}～${toText}`
-    // );
+    text += `\n`;
+    text += await generateGraph(
+      global.graph.labels,
+      global.graph.counts,
+      `流速計測 ${todayText} ${fromText}～${toText}`
+    );
     console.log(text);
     if (MODE_DEV) return;
     send(text);
@@ -390,7 +390,7 @@ cron.schedule("* * * * *", async () => {
   );
   const values: string[][] = [];
   values.push(["updated_at", format(new Date(), "yyyyMMddhhmm")]);
-  relays.filter((relay) => relay.target === "jp").forEach((relay, index) => {
+  relays.forEach((relay, index) => {
     const status = {
       status: !!countData[index].slice(-1)[0],
       count: countData[index],
