@@ -375,11 +375,10 @@ if (MODE_DEV) {
 cron.schedule("* * * * *", async () => {
   if (MODE_DEV) return;
   const relayUrls: string[] = [];
-  for (const relay of relays.filter((relay) => relay.target === "jp")) relayUrls.push(relay.url);
+  for (const relay of relays) relayUrls.push(relay.url);
   const result = await getCount(relayUrls, [Kind.Text], 1);
-  console.log(result);
   const countData = await Promise.all(
-    relays.filter((relay) => relay.target === "jp").map(async (relay) => {
+    relays.map(async (relay) => {
       const count = result[relay.url] ?? NaN;
       const items = await submitNostrStorage(relay.key, count);
       if (items) {
