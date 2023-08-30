@@ -285,66 +285,66 @@ const postIntervalSpeed = async (span: number) => {
   }
 };
 
-const getChannelMessageData = async (relays: Relays, span: number) => {
-  const graph = {
-    labels: [] as string[],
-    counts: [] as number[],
-  };
-  const relayUrls: string[] = [];
-  for (const relay of relays) relayUrls.push(relay.url);
-  const result = await getCount(relayUrls, [Kind.ChannelMessage], span);
-  let text = "";
-  relays.forEach((relay) => {
-    const count = result[relay.url];
-    const forText = count !== null ? `${count} posts` : "欠測";
-    text += `${relay.name}: ${forText} \n`;
-    graph.labels.push(relay.name);
-    graph.counts.push(count ?? NaN);
-  });
-  return { text, graph };
-};
+// const getChannelMessageData = async (relays: Relays, span: number) => {
+//   const graph = {
+//     labels: [] as string[],
+//     counts: [] as number[],
+//   };
+//   const relayUrls: string[] = [];
+//   for (const relay of relays) relayUrls.push(relay.url);
+//   const result = await getCount(relayUrls, [Kind.ChannelMessage], span);
+//   let text = "";
+//   relays.forEach((relay) => {
+//     const count = result[relay.url];
+//     const forText = count !== null ? `${count} posts` : "欠測";
+//     text += `${relay.name}: ${forText} \n`;
+//     graph.labels.push(relay.name);
+//     graph.counts.push(count ?? NaN);
+//   });
+//   return { text, graph };
+// };
 
-const channelMessageIntervalSpeed = async (span: number) => {
-  try {
-    const from = subMinutes(startOfMinute(new Date()), 10);
-    const to = startOfMinute(new Date());
-    const todayText = format(from, "yyyy/MM/dd");
-    const fromText = format(from, "HH:mm");
-    const toText = format(to, "HH:mm");
-    let text = `■ ぱぶちゃ流速\n`;
-    text += `  ${todayText} ${fromText}～${toText}\n\n`;
-    const jp = await getChannelMessageData(
-      relays.filter((relay) => relay.target === "jp"),
-      span
-    );
-    // const global = await getChannelMessageData(
-    //   relays.filter((relay) => relay.target === "all"),
-    //   span
-    // );
-    text += "[JP リレー]\n";
-    text += jp.text;
-    // text += "\n[GLOBAL リレー]\n";
-    // text += global.text;
-    // text += `\n■ 野洲田川定点観測所\n`;
-    // text += `  https://nostr-hotter-site.vercel.app\n\n`;
-    // text += await generateGraph(
-    //   jp.graph.labels,
-    //   jp.graph.counts,
-    //   `流速計測 ${todayText} ${fromText}～${toText}`
-    // );
-    // text += `\n`;
-    // text += await generateGraph(
-    //   global.graph.labels,
-    //   global.graph.counts,
-    //   `流速計測 ${todayText} ${fromText}～${toText}`
-    // );
-    console.log(text);
-    if (MODE_DEV) return;
-    send(text);
-  } catch (e) {
-    logger("ERORR", e);
-  }
-};
+// const channelMessageIntervalSpeed = async (span: number) => {
+//   try {
+//     const from = subMinutes(startOfMinute(new Date()), 10);
+//     const to = startOfMinute(new Date());
+//     const todayText = format(from, "yyyy/MM/dd");
+//     const fromText = format(from, "HH:mm");
+//     const toText = format(to, "HH:mm");
+//     let text = `■ ぱぶちゃ流速\n`;
+//     text += `  ${todayText} ${fromText}～${toText}\n\n`;
+//     const jp = await getChannelMessageData(
+//       relays.filter((relay) => relay.target === "jp"),
+//       span
+//     );
+//     // const global = await getChannelMessageData(
+//     //   relays.filter((relay) => relay.target === "all"),
+//     //   span
+//     // );
+//     text += "[JP リレー]\n";
+//     text += jp.text;
+//     // text += "\n[GLOBAL リレー]\n";
+//     // text += global.text;
+//     // text += `\n■ 野洲田川定点観測所\n`;
+//     // text += `  https://nostr-hotter-site.vercel.app\n\n`;
+//     // text += await generateGraph(
+//     //   jp.graph.labels,
+//     //   jp.graph.counts,
+//     //   `流速計測 ${todayText} ${fromText}～${toText}`
+//     // );
+//     // text += `\n`;
+//     // text += await generateGraph(
+//     //   global.graph.labels,
+//     //   global.graph.counts,
+//     //   `流速計測 ${todayText} ${fromText}～${toText}`
+//     // );
+//     console.log(text);
+//     if (MODE_DEV) return;
+//     send(text);
+//   } catch (e) {
+//     logger("ERORR", e);
+//   }
+// };
 
 const postSystemUp = async () => {
   try {
@@ -366,7 +366,7 @@ if (MODE_DEV) {
   // const result = await getCount("wss://r.kojira.io", 10);
   // console.log(result);
   // await postIntervalSpeed(10);
-  await channelMessageIntervalSpeed(10)
+  // await channelMessageIntervalSpeed(10)
 } else {
   await postSystemUp();
 }
@@ -408,10 +408,10 @@ cron.schedule("*/10 * * * *", async () => {
   if (MODE_DEV) return;
   await postIntervalSpeed(10);
 });
-cron.schedule("*/10 * * * *", async () => {
-  if (MODE_DEV) return;
-  await channelMessageIntervalSpeed(10);
-});
+// cron.schedule("*/10 * * * *", async () => {
+//   if (MODE_DEV) return;
+//   await channelMessageIntervalSpeed(10);
+// });
 // "46 5,11,17,23 * * *"
 cron.schedule("46 5 * * *", async () => {
   if (MODE_DEV) return;
