@@ -8,7 +8,6 @@ import "websocket-polyfill";
 dotenv.config();
 const HEX: string = process.env.HEX ?? "";
 
-const fetcher = NostrFetcher.init();
 const RELAYS = [
   "wss://relay-jp.nostr.wirednet.jp",
   "wss://r.kojira.io",

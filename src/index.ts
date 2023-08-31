@@ -4,8 +4,6 @@ import cron from "node-cron";
 import { format, startOfMinute, subMinutes, getUnixTime } from "date-fns";
 import { relays } from "./relays.js";
 import type { Relays } from "./relays.js";
-import { Kind, relayInit } from "nostr-tools";
-import "websocket-polyfill";
 import axios from "axios";
 import chartPkg from "chart.js";
 import { createCanvas, registerFont } from "canvas";
@@ -16,7 +14,7 @@ import { logger } from "./log.js";
 const { Chart } = chartPkg;
 
 const MODE_DEV = process.argv.includes("--dev");
-const MIGRATE = process.argv.includes("--migrate");
+// const MIGRATE = process.argv.includes("--migrate");
 
 dotenv.config();
 const { IMGUR_CLIENT_ID } = process.env;
@@ -35,59 +33,29 @@ const getCount = async (
   const to = getUnixTime(now);
   const from = getUnixTime(subMinutes(now, span));
 
-  // const fetcher = NostrFetcher.init();
-  // const response: count = {};
-  // let fetchStats: FetchStats | undefined = undefined;
-
-  // await fetcher.fetchAllEvents(
-  //   urls,
-  //   { kinds: [eventKind.text] },
-  //   { since: from, until: to },
-  //   {
-  //     sort: true,
-  //     statsListener: (stats) => {
-  //       fetchStats = stats;
-  //     },
-  //   }
-  // );
-  // fetcher.shutdown();
-  // urls.forEach((url) => {
-  //   const relay_url = url.endsWith("/") ? url : url + "/";
-  //   const resultStatus = fetchStats.relays[relay_url]?.status === "completed";
-  //   response[url] = resultStatus
-  //     ? fetchStats.relays[relay_url].numFetchedEvents
-  //     : null;
-  // });
+  const fetcher = NostrFetcher.init();
   const response: count = {};
-  const result = await Promise.all(
-    urls.map(async (url) => {
-      const relay = relayInit(url);
-      await relay.connect();
-      let event: number = 0;
-      const result = await new Promise ((resolve) => {
-        try {
-          const sub = relay.sub([
-            { kinds: targetKinds, since: from, until: to, limit: 10000 },
-          ]);
-          sub.on("event", () => {
-            event++;
-          })
-          sub.on("eose", () => {
-            resolve(true);
-          })
-        } catch (ex) {
-          return Promise.resolve(false);
-        }
-      })
-      return {url: url, count: result ? event : null}
-    })
+  let fetchStats: FetchStats | undefined = undefined;
+
+  await fetcher.fetchAllEvents(
+    urls,
+    { kinds: targetKinds },
+    { since: from, until: to },
+    {
+      sort: true,
+      statsListener: (stats) => {
+        fetchStats = stats;
+      },
+    }
   );
-  // console.log(result)
-  for(const url of urls) {
-    // console.log(url)
-    const count = result.find((item) => item.url === url);
-    response[url] = count ? count.count : null
-  }
+  fetcher.shutdown();
+  urls.forEach((url) => {
+    const relay_url = url.endsWith("/") ? url : url + "/";
+    const resultStatus = fetchStats.relays[relay_url]?.status === "completed";
+    response[url] = resultStatus
+      ? fetchStats.relays[relay_url].numFetchedEvents
+      : null;
+  });
   return response;
 };
 
@@ -231,7 +199,7 @@ const getPostData = async (relays: Relays, span: number) => {
   };
   const relayUrls: string[] = [];
   for (const relay of relays) relayUrls.push(relay.url);
-  const result = await getCount(relayUrls, [Kind.Text], span);
+  const result = await getCount(relayUrls, [eventKind.text], span);
   let text = "";
   relays.forEach((relay) => {
     const count = result[relay.url];
@@ -376,7 +344,7 @@ cron.schedule("* * * * *", async () => {
   if (MODE_DEV) return;
   const relayUrls: string[] = [];
   for (const relay of relays) relayUrls.push(relay.url);
-  const result = await getCount(relayUrls, [Kind.Text], 1);
+  const result = await getCount(relayUrls, [eventKind.text], 1);
   const countData = await Promise.all(
     relays.map(async (relay) => {
       const count = result[relay.url] ?? NaN;
