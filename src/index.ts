@@ -103,7 +103,7 @@ const generateGraph = async (
   const canvas = createCanvas(1200, labels.length * 72 + 100);
   const ctx: any = canvas.getContext("2d");
 
-  new Chart(ctx, {
+  const chart = new Chart(ctx, {
     type: "bar",
     data: {
       labels: labels,
@@ -174,6 +174,7 @@ const generateGraph = async (
   const image = canvas.toBuffer();
   writeFileSync("./chart.png", image);
   const imageBase64 = image.toString("base64");
+  chart.destroy();
 
   // CLIENT_IDなければ画像URLなし
   if (!IMGUR_CLIENT_ID) return "";
@@ -373,8 +374,10 @@ cron.schedule("* * * * *", async () => {
   );
 });
 cron.schedule("*/10 * * * *", async () => {
+  // console.log("start", process.memoryUsage().heapUsed)
   if (MODE_DEV) return;
   await postIntervalSpeed(10);
+  // console.log("end", process.memoryUsage().heapUsed)
 });
 // cron.schedule("*/10 * * * *", async () => {
 //   if (MODE_DEV) return;

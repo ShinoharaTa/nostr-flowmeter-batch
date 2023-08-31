@@ -9,7 +9,7 @@
   "private": true,
   "scripts": {
     "build": "tsc",
-    "start": "tsc && node dist/index.js",
+    "start": "tsc && node --inspect dist/index.js",
     "dev": "tsc && node dist/index.js --dev"
   },
   "dependencies": {
