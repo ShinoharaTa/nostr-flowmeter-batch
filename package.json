@@ -13,9 +13,13 @@
     "dev": "tsc && node dist/index.js --dev"
   },
   "dependencies": {
+    "@babel/core": "^7.23.7",
+    "@babel/preset-env": "^7.23.7",
+    "@babel/preset-typescript": "^7.23.3",
     "@types/node": "^20.4.5",
     "@types/node-cron": "^3.0.8",
     "axios": "^1.4.0",
+    "biome": "^0.2.2",
     "canvas": "^2.11.2",
     "chart.js": "^3.x",
     "date-fns": "^2.30.0",
