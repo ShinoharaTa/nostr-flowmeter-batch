@@ -1,9 +1,10 @@
 import { currUnixtime } from "./utils.js";
 import { finishEvent, getPublicKey, Kind, SimplePool } from "nostr-tools";
 import type { Event, EventTemplate } from "nostr-tools";
-import { eventKind, NostrFetcher } from "nostr-fetch";
+import { eventKind, FetchStats, NostrFetcher } from "nostr-fetch";
 import dotenv from "dotenv";
 import "websocket-polyfill";
+import { getUnixTime, startOfMinute, subMinutes } from "date-fns";
 
 dotenv.config();
 const HEX: string = process.env.HEX ?? "";
@@ -68,4 +69,44 @@ export const nip78post = async (
   pub.on("failed", (ev) => {
     console.error("failed to send event", ev);
   });
+};
+
+interface count {
+  [key: string]: number;
+}
+export const count = async (
+  relays: string[],
+  targetKinds: number[],
+  start: Date,
+  span: number,
+): Promise<count | null> => {
+
+  const now = startOfMinute(start);
+  const to = getUnixTime(now);
+  const from = getUnixTime(subMinutes(now, span));
+
+  const fetcher = NostrFetcher.init();
+  const response: count = {};
+  let fetchStats: FetchStats | undefined = undefined;
+
+  await fetcher.fetchAllEvents(
+    relays,
+    { kinds: targetKinds },
+    { since: from, until: to },
+    {
+      sort: true,
+      statsListener: (stats) => {
+        fetchStats = stats;
+      },
+    }
+  );
+  fetcher.shutdown();
+  relays.map((relay) => {
+    const relay_url = relay.endsWith("/") ? relay : `${relay}/`;
+    const resultStatus = fetchStats.relays[relay_url]?.status === "completed";
+    response[relay] = resultStatus
+      ? fetchStats.relays[relay_url].numFetchedEvents
+      : null;
+  });
+  return response;
 };
