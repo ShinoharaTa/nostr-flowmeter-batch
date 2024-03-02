@@ -71,7 +71,7 @@ export const nip78post = async (
   });
 };
 
-interface count {
+export interface Count {
   [key: string]: number;
 }
 export const count = async (
@@ -79,14 +79,14 @@ export const count = async (
   targetKinds: number[],
   start: Date,
   span: number,
-): Promise<count | null> => {
+): Promise<Count | null> => {
 
   const now = startOfMinute(start);
   const to = getUnixTime(now);
   const from = getUnixTime(subMinutes(now, span));
 
   const fetcher = NostrFetcher.init();
-  const response: count = {};
+  const response: Count = {};
   let fetchStats: FetchStats | undefined = undefined;
 
   await fetcher.fetchAllEvents(

@@ -1,14 +1,14 @@
 import dotenv from "dotenv";
-import { nip78get, nip78post, send } from "./Nostr.js";
+import { nip78get, nip78post, send, Count, count } from "./Nostr.js";
 import cron from "node-cron";
 import { format, startOfMinute, subMinutes, getUnixTime } from "date-fns";
 import { relays } from "./relays.js";
 import type { Relays } from "./relays.js";
 import axios from "axios";
-import chartPkg from "chart.js";
+import chartPkg, { ChartItem } from "chart.js";
 import { createCanvas, registerFont } from "canvas";
 import { writeFileSync } from "fs";
-import { eventKind, FetchStats, NostrFetcher } from "nostr-fetch";
+import { eventKind } from "nostr-fetch";
 import { logger } from "./log.js";
 
 const { Chart } = chartPkg;
@@ -20,44 +20,6 @@ dotenv.config();
 const { IMGUR_CLIENT_ID } = process.env;
 registerFont("./font.ttf", { family: "CustomFont" });
 
-interface count {
-  [key: string]: number;
-}
-
-const getCount = async (
-  urls: string[],
-  targetKinds: number[],
-  span: number
-): Promise<count | null> => {
-  const now = startOfMinute(new Date());
-  const to = getUnixTime(now);
-  const from = getUnixTime(subMinutes(now, span));
-
-  const fetcher = NostrFetcher.init();
-  const response: count = {};
-  let fetchStats: FetchStats | undefined = undefined;
-
-  await fetcher.fetchAllEvents(
-    urls,
-    { kinds: targetKinds },
-    { since: from, until: to },
-    {
-      sort: true,
-      statsListener: (stats) => {
-        fetchStats = stats;
-      },
-    }
-  );
-  fetcher.shutdown();
-  urls.forEach((url) => {
-    const relay_url = url.endsWith("/") ? url : url + "/";
-    const resultStatus = fetchStats.relays[relay_url]?.status === "completed";
-    response[url] = resultStatus
-      ? fetchStats.relays[relay_url].numFetchedEvents
-      : null;
-  });
-  return response;
-};
 
 const submitNostrStorage = async (
   key: string,
@@ -101,9 +63,9 @@ const generateGraph = async (
   title: string
 ) => {
   const canvas = createCanvas(1200, labels.length * 72 + 100);
-  const ctx: any = canvas.getContext("2d");
+  const ctx: unknown = canvas.getContext("2d");
 
-  const chart = new Chart(ctx, {
+  const chart = new Chart(ctx as ChartItem, {
     type: "bar",
     data: {
       labels: labels,
@@ -193,17 +155,16 @@ const generateGraph = async (
   }
 };
 
-const getPostData = async (relays: Relays, span: number) => {
+const getPostData = async (relayOfCount: Count, selectedRelays: Relays) => {
   const graph = {
     labels: [] as string[],
     counts: [] as number[],
   };
   const relayUrls: string[] = [];
-  for (const relay of relays) relayUrls.push(relay.url);
-  const result = await getCount(relayUrls, [eventKind.text], span);
+  for (const relay of selectedRelays) relayUrls.push(relay.url);
   let text = "";
-  relays.forEach((relay) => {
-    const count = result[relay.url];
+  relays.map((relay) => {
+    const count = relayOfCount[relay.url];
     const forText = count !== null ? `${count} posts` : "欠測";
     text += `${relay.name}: ${forText} \n`;
     graph.labels.push(relay.name);
@@ -212,35 +173,35 @@ const getPostData = async (relays: Relays, span: number) => {
   return { text, graph };
 };
 
-const postIntervalSpeed = async (span: number) => {
+const postIntervalSpeed = async (now: Date, relayOfCount: Count) => {
   try {
-    const from = subMinutes(startOfMinute(new Date()), 10);
-    const to = startOfMinute(new Date());
+    const from = subMinutes(startOfMinute(now), 10);
+    const to = startOfMinute(now);
     const todayText = format(from, "yyyy/MM/dd");
     const fromText = format(from, "HH:mm");
     const toText = format(to, "HH:mm");
-    let text = `■ 流速計測\n`;
+    let text = "■ 流速計測\n";
     text += `  ${todayText} ${fromText}～${toText}\n\n`;
     const jp = await getPostData(
+      relayOfCount,
       relays.filter((relay) => relay.target === "jp"),
-      span
     );
     const global = await getPostData(
+      relayOfCount,
       relays.filter((relay) => relay.target === "all"),
-      span
     );
     text += "[JP リレー]\n";
     text += jp.text;
     text += "\n[GLOBAL リレー]\n";
     text += global.text;
-    text += `\n■ 野洲田川定点観測所\n`;
-    text += `  https://nostr-hotter-site.vercel.app\n\n`;
+    text += "\n■ 野洲田川定点観測所\n";
+    text += "  https://nostr-hotter-site.vercel.app\n\n";
     text += await generateGraph(
       jp.graph.labels,
       jp.graph.counts,
       `流速計測 ${todayText} ${fromText}～${toText}`
     );
-    text += `\n`;
+    text += "\n";
     text += await generateGraph(
       global.graph.labels,
       global.graph.counts,
@@ -253,67 +214,6 @@ const postIntervalSpeed = async (span: number) => {
     logger("ERORR", e);
   }
 };
-
-// const getChannelMessageData = async (relays: Relays, span: number) => {
-//   const graph = {
-//     labels: [] as string[],
-//     counts: [] as number[],
-//   };
-//   const relayUrls: string[] = [];
-//   for (const relay of relays) relayUrls.push(relay.url);
-//   const result = await getCount(relayUrls, [Kind.ChannelMessage], span);
-//   let text = "";
-//   relays.forEach((relay) => {
-//     const count = result[relay.url];
-//     const forText = count !== null ? `${count} posts` : "欠測";
-//     text += `${relay.name}: ${forText} \n`;
-//     graph.labels.push(relay.name);
-//     graph.counts.push(count ?? NaN);
-//   });
-//   return { text, graph };
-// };
-
-// const channelMessageIntervalSpeed = async (span: number) => {
-//   try {
-//     const from = subMinutes(startOfMinute(new Date()), 10);
-//     const to = startOfMinute(new Date());
-//     const todayText = format(from, "yyyy/MM/dd");
-//     const fromText = format(from, "HH:mm");
-//     const toText = format(to, "HH:mm");
-//     let text = `■ ぱぶちゃ流速\n`;
-//     text += `  ${todayText} ${fromText}～${toText}\n\n`;
-//     const jp = await getChannelMessageData(
-//       relays.filter((relay) => relay.target === "jp"),
-//       span
-//     );
-//     // const global = await getChannelMessageData(
-//     //   relays.filter((relay) => relay.target === "all"),
-//     //   span
-//     // );
-//     text += "[JP リレー]\n";
-//     text += jp.text;
-//     // text += "\n[GLOBAL リレー]\n";
-//     // text += global.text;
-//     // text += `\n■ 野洲田川定点観測所\n`;
-//     // text += `  https://nostr-hotter-site.vercel.app\n\n`;
-//     // text += await generateGraph(
-//     //   jp.graph.labels,
-//     //   jp.graph.counts,
-//     //   `流速計測 ${todayText} ${fromText}～${toText}`
-//     // );
-//     // text += `\n`;
-//     // text += await generateGraph(
-//     //   global.graph.labels,
-//     //   global.graph.counts,
-//     //   `流速計測 ${todayText} ${fromText}～${toText}`
-//     // );
-//     console.log(text);
-//     if (MODE_DEV) return;
-//     send(text);
-//   } catch (e) {
-//     logger("ERORR", e);
-//   }
-// };
 
 const postSystemUp = async () => {
   try {
@@ -376,6 +276,7 @@ cron.schedule("* * * * *", async () => {
 cron.schedule("*/10 * * * *", async () => {
   // console.log("start", process.memoryUsage().heapUsed)
   if (MODE_DEV) return;
+  const countOfRelays = count(relays.map(relay => relay.url), [1], new Date(), 10)
   await postIntervalSpeed(10);
   // console.log("end", process.memoryUsage().heapUsed)
 });
