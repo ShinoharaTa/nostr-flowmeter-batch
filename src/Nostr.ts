@@ -20,10 +20,10 @@ const pool = new SimplePool();
 
 export const send = async (
   content: string,
-  targetEvent: Event | null = null
+  targetEvent: Event | null = null,
 ) => {
   const created = targetEvent ? targetEvent.created_at + 1 : currUnixtime();
-  const ev: EventTemplate<Kind.Article>  = {
+  const ev: EventTemplate<Kind.Article> = {
     kind: Kind.Article,
     content: content,
     tags: [],
@@ -48,16 +48,11 @@ export const nip78get = async (storeName: string) => {
     "#d": [storeName],
     authors: [getPublicKey(HEX)],
   });
-  return result;
+  return result.content;
 };
 
-export const nip78post = async (
-  storeName: string,
-  content: string,
-) => {
-  const tags = [
-    ["d", storeName],
-  ];
+export const nip78post = async (storeName: string, content: string) => {
+  const tags = [["d", storeName]];
   const ev = {
     kind: eventKind.appSpecificData,
     content,
@@ -80,7 +75,6 @@ export const count = async (
   start: Date,
   span: number,
 ): Promise<Count | null> => {
-
   const now = startOfMinute(start);
   const to = getUnixTime(now);
   const from = getUnixTime(subMinutes(now, span));
@@ -98,7 +92,7 @@ export const count = async (
       statsListener: (stats) => {
         fetchStats = stats;
       },
-    }
+    },
   );
   fetcher.shutdown();
   relays.map((relay) => {
