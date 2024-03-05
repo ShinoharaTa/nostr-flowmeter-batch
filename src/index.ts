@@ -8,7 +8,6 @@ import axios from "axios";
 import chartPkg, { ChartItem } from "chart.js";
 import { createCanvas, registerFont } from "canvas";
 import { writeFileSync } from "fs";
-import { eventKind } from "nostr-fetch";
 import { logger } from "./log.js";
 
 const { Chart } = chartPkg;
@@ -20,47 +19,26 @@ dotenv.config();
 const { IMGUR_CLIENT_ID } = process.env;
 registerFont("./font.ttf", { family: "CustomFont" });
 
-
-const submitNostrStorage = async (
-  key: string,
-  count: number
+const updateChart = async (
+  tableName: string,
+  time: number,
+  count: number,
 ): Promise<string[][]> => {
-  const now = subMinutes(startOfMinute(new Date()), 1);
-  const formattedNow = format(now, "yyyyMMddHHmm");
-  const db = await nip78get(
-    `nostr-arrival-rate_${key}`,
-    `nostr-arrival-rate_${key}`
-  );
-  const datas = db ? db.tags.slice(3) : [];
-  const records = [...datas, [formattedNow, count.toString()]].slice(-1440);
-  if (MODE_DEV) return records.slice(-10);
-  nip78post(
-    `nostr-arrival-rate_${key}`,
-    `nostr-arrival-rate_${key}`,
-    "流速検出 realtime",
-    records
-  );
-  const formattedDate = format(now, "yyyyMMdd");
-  const db_day = await nip78get(
-    `nostr-arrival-rate_${key}_${formattedDate}`,
-    `nostr-arrival-rate_${key}_${formattedDate}`
-  );
-  const datas_day = db_day ? db_day.tags.slice(3) : [];
-  const records_day = [...datas_day, [formattedNow, count.toString()]];
-  nip78post(
-    `nostr-arrival-rate_${key}_${formattedDate}`,
-    `nostr-arrival-rate_${key}_${formattedDate}`,
-    "流速検出 " + formattedDate,
-    records_day
-  );
-  logger("INFO", `Count Complete.`);
-  return records.slice(-10);
+  const chartData = await nip78get(tableName);
+  const datas = chartData ? JSON.parse(chartData) : { time: [], data: [] };
+  const records = {
+    time: [[...datas.time, time].slice(144)],
+    data: [[...datas.data, count].slice(144)],
+  };
+  nip78post(tableName, JSON.stringify(records));
+  logger("INFO", "Count Complete.");
+  return;
 };
 
 const generateGraph = async (
   labels: string[],
   values: number[],
-  title: string
+  title: string,
 ) => {
   const canvas = createCanvas(1200, labels.length * 72 + 100);
   const ctx: unknown = canvas.getContext("2d");
@@ -146,7 +124,7 @@ const generateGraph = async (
     const response = await axios.post(
       "https://api.imgur.com/3/image",
       { image: imageBase64 },
-      { headers: { Authorization: `Client-ID ${IMGUR_CLIENT_ID}` } }
+      { headers: { Authorization: `Client-ID ${IMGUR_CLIENT_ID}` } },
     );
     return response.data.data.link;
   } catch (err) {
@@ -163,7 +141,7 @@ const getPostData = async (relayOfCount: Count, selectedRelays: Relays) => {
   const relayUrls: string[] = [];
   for (const relay of selectedRelays) relayUrls.push(relay.url);
   let text = "";
-  relays.map((relay) => {
+  selectedRelays.map((relay) => {
     const count = relayOfCount[relay.url];
     const forText = count !== null ? `${count} posts` : "欠測";
     text += `${relay.name}: ${forText} \n`;
@@ -199,16 +177,15 @@ const postIntervalSpeed = async (now: Date, relayOfCount: Count) => {
     text += await generateGraph(
       jp.graph.labels,
       jp.graph.counts,
-      `流速計測 ${todayText} ${fromText}～${toText}`
+      `流速計測 ${todayText} ${fromText}～${toText}`,
     );
     text += "\n";
     text += await generateGraph(
       global.graph.labels,
       global.graph.counts,
-      `流速計測 ${todayText} ${fromText}～${toText}`
+      `流速計測 ${todayText} ${fromText}～${toText}`,
     );
     console.log(text);
-    if (MODE_DEV) return;
     send(text);
   } catch (e) {
     logger("ERORR", e);
@@ -219,74 +196,28 @@ const postSystemUp = async () => {
   try {
     const now = startOfMinute(new Date());
     const nowText = format(now, "yyyy/MM/dd HH:mm");
-    let text = `再起動しました\n`;
+    let text = "再起動しました\n";
     text += `  ${nowText}\n`;
-    text += `■ 野洲田川定点観測所\n`;
-    text += `  https://nostr-hotter-site.vercel.app\n\n`;
+    text += "■ 野洲田川定点観測所\n";
+    text += "  https://nostr-hotter-site.vercel.app\n\n";
     send(text);
   } catch (e) {
     logger("ERORR", e);
   }
 };
 
-// テスト処理実行
-if (MODE_DEV) {
-  // const result = await getCount("wss://r1234567.kojira.io", 1);
-  // const result = await getCount("wss://r.kojira.io", 10);
-  // console.log(result);
-  // await postIntervalSpeed(10);
-  // await channelMessageIntervalSpeed(10)
-} else {
-  await postSystemUp();
-}
-
-// Schedule Batch
-cron.schedule("* * * * *", async () => {
-  if (MODE_DEV) return;
-  const relayUrls: string[] = [];
-  for (const relay of relays) relayUrls.push(relay.url);
-  const result = await getCount(relayUrls, [eventKind.text], 1);
-  const countData = await Promise.all(
-    relays.map(async (relay) => {
-      const count = result[relay.url] ?? NaN;
-      const items = await submitNostrStorage(relay.key, count);
-      if (items) {
-        const result = items.map((item) => Number(item[1]));
-        return result;
-      }
-      return [null];
-    })
-  );
-  const values: string[][] = [];
-  values.push(["updated_at", format(new Date(), "yyyyMMddhhmm")]);
-  relays.forEach((relay, index) => {
-    const status = {
-      status: !!countData[index].slice(-1)[0],
-      count: countData[index],
-    };
-    values.push([relay.key, JSON.stringify(status)]);
-  });
-  nip78post(
-    `relay_health_status`,
-    `relay_health_status`,
-    "流速検出 realtime",
-    values
-  );
-});
 cron.schedule("*/10 * * * *", async () => {
-  // console.log("start", process.memoryUsage().heapUsed)
-  if (MODE_DEV) return;
-  const countOfRelays = count(relays.map(relay => relay.url), [1], new Date(), 10)
-  await postIntervalSpeed(10);
-  // console.log("end", process.memoryUsage().heapUsed)
+  const countOfRelays = await count(
+    relays.map((relay) => relay.url),
+    [1],
+    new Date(),
+    10,
+  );
+  await postIntervalSpeed(new Date(), countOfRelays);
 });
-// cron.schedule("*/10 * * * *", async () => {
-//   if (MODE_DEV) return;
-//   await channelMessageIntervalSpeed(10);
-// });
-// "46 5,11,17,23 * * *"
+
 cron.schedule("46 5 * * *", async () => {
   if (MODE_DEV) return;
-  logger("INFO", `RESTART`);
+  logger("INFO", "RESTART");
   process.exit();
 });
