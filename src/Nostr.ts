@@ -23,8 +23,8 @@ export const send = async (
   targetEvent: Event | null = null,
 ) => {
   const created = targetEvent ? targetEvent.created_at + 1 : currUnixtime();
-  const ev: EventTemplate<Kind.Article> = {
-    kind: Kind.Article,
+  const ev: EventTemplate<Kind.Text> = {
+    kind: Kind.Text,
     content: content,
     tags: [],
     created_at: created,
