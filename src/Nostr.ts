@@ -1,7 +1,7 @@
 import { currUnixtime } from "./utils.js";
 import { finishEvent, getPublicKey, Kind, SimplePool } from "nostr-tools";
 import type { Event, EventTemplate } from "nostr-tools";
-import { eventKind, FetchStats, NostrFetcher } from "nostr-fetch";
+import { eventKind, type FetchStats, NostrFetcher } from "nostr-fetch";
 import dotenv from "dotenv";
 import "websocket-polyfill";
 import { getUnixTime, startOfMinute, subMinutes } from "date-fns";
@@ -48,7 +48,7 @@ export const nip78get = async (storeName: string) => {
     "#d": [storeName],
     authors: [getPublicKey(HEX)],
   });
-  return result.content;
+  return result?.content;
 };
 
 export const nip78post = async (storeName: string, content: string) => {

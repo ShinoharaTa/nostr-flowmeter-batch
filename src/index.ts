@@ -1,13 +1,19 @@
 import dotenv from "dotenv";
-import { nip78get, nip78post, send, Count, count } from "./Nostr.js";
+import { nip78get, nip78post, send, type Count, count } from "./Nostr.js";
 import cron from "node-cron";
-import { format, startOfMinute, subMinutes, getUnixTime } from "date-fns";
+import {
+  format,
+  startOfMinute,
+  subMinutes,
+  getUnixTime,
+  formatISO,
+} from "date-fns";
 import { relays } from "./relays.js";
 import type { Relays } from "./relays.js";
 import axios from "axios";
-import chartPkg, { ChartItem } from "chart.js";
+import chartPkg, { type ChartItem } from "chart.js";
 import { createCanvas, registerFont } from "canvas";
-import { writeFileSync } from "fs";
+import { writeFileSync } from "node:fs";
 import { logger } from "./log.js";
 
 const { Chart } = chartPkg;
@@ -22,16 +28,32 @@ registerFont("./font.ttf", { family: "CustomFont" });
 const updateChart = async (
   tableName: string,
   time: number,
-  count: number,
+  countOfRelays: Count,
 ): Promise<string[][]> => {
-  const chartData = await nip78get(tableName);
-  const datas = chartData ? JSON.parse(chartData) : { time: [], data: [] };
-  const records = {
-    time: [[...datas.time, time].slice(144)],
-    data: [[...datas.data, count].slice(144)],
-  };
-  nip78post(tableName, JSON.stringify(records));
-  logger("INFO", "Count Complete.");
+  try {
+    const getChartData = await nip78get(tableName);
+    console.log(getChartData);
+    const chartData = getChartData
+      ? JSON.parse(getChartData)
+      : { axis: [], datas: {} };
+    const records = {
+      axis: [...chartData.axis, time].slice(144),
+      datas: chartData.datas,
+    };
+    for (const relay of relays) {
+      if (relay.key in records.datas) {
+        records.datas[relay.key].push(countOfRelays[relay.url]);
+        records.datas[relay.key].slice(144);
+      } else {
+        records.datas[relay.key] = [];
+        records.datas[relay.key].push(countOfRelays[relay.url]);
+      }
+    }
+    nip78post(tableName, JSON.stringify(records));
+    logger("INFO", "Count Complete.");
+  } catch (e) {
+    console.log(e);
+  }
   return;
 };
 
@@ -207,6 +229,8 @@ const postSystemUp = async () => {
 };
 
 cron.schedule("*/10 * * * *", async () => {
+  const now = startOfMinute(new Date());
+  const nowIsoFormat = getUnixTime(now);
   const countOfRelays = await count(
     relays.map((relay) => relay.url),
     [1],
@@ -214,6 +238,7 @@ cron.schedule("*/10 * * * *", async () => {
     10,
   );
   await postIntervalSpeed(new Date(), countOfRelays);
+  await updateChart("nostr_river_flowmeter", nowIsoFormat, countOfRelays);
 });
 
 cron.schedule("46 5 * * *", async () => {
