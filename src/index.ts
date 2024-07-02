@@ -1,5 +1,6 @@
 import dotenv from "dotenv";
 import { nip78get, nip78post, send, type Count, count } from "./Nostr.js";
+import { appendWithLimit } from "./utils.js";
 import cron from "node-cron";
 import {
   format,
@@ -19,7 +20,6 @@ import { logger } from "./log.js";
 const { Chart } = chartPkg;
 
 const MODE_DEV = process.argv.includes("--dev");
-// const MIGRATE = process.argv.includes("--migrate");
 
 dotenv.config();
 const { IMGUR_CLIENT_ID } = process.env;
@@ -36,18 +36,22 @@ const updateChart = async (
       ? JSON.parse(getChartData)
       : { axis: [], datas: {} };
     const records = {
-      axis: [...chartData.axis, time].slice(144),
+      axis: chartData.axis,
       datas: chartData.datas,
     };
     for (const relay of relays) {
       if (relay.key in records.datas) {
-        records.datas[relay.key].push(countOfRelays[relay.url]);
-        records.datas[relay.key].slice(144);
+        records.datas[relay.key] = appendWithLimit(
+          records.datas[relay.key],
+          countOfRelays[relay.url],
+          144,
+        );
       } else {
         records.datas[relay.key] = [];
         records.datas[relay.key].push(countOfRelays[relay.url]);
       }
     }
+    records.axis = appendWithLimit(records.axis, time, 144);
     nip78post(tableName, JSON.stringify(records));
     console.log(records);
     logger("INFO", "Count Complete.");
@@ -228,7 +232,7 @@ const postSystemUp = async () => {
   }
 };
 
-cron.schedule("*/10 * * * *", async () => {
+cron.schedule("*/1 * * * *", async () => {
   const now = startOfMinute(new Date());
   const nowIsoFormat = getUnixTime(now);
   const countOfRelays = await count(
@@ -239,6 +243,12 @@ cron.schedule("*/10 * * * *", async () => {
   );
   await postIntervalSpeed(new Date(), countOfRelays);
   await updateChart("nostr_river_flowmeter", nowIsoFormat, countOfRelays);
+  const date = format(now, "yyyyMMdd");
+  await updateChart(
+    `nostr_river_flowmeter_${date}`,
+    nowIsoFormat,
+    countOfRelays,
+  );
 });
 
 cron.schedule("46 5 * * *", async () => {
