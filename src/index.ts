@@ -232,7 +232,7 @@ const postSystemUp = async () => {
   }
 };
 
-cron.schedule("*/1 * * * *", async () => {
+cron.schedule("*/10 * * * *", async () => {
   const now = startOfMinute(new Date());
   const nowIsoFormat = getUnixTime(now);
   const countOfRelays = await count(
