@@ -32,7 +32,6 @@ const updateChart = async (
 ): Promise<string[][]> => {
   try {
     const getChartData = await nip78get(tableName);
-    console.log(getChartData);
     const chartData = getChartData
       ? JSON.parse(getChartData)
       : { axis: [], datas: {} };
@@ -50,6 +49,7 @@ const updateChart = async (
       }
     }
     nip78post(tableName, JSON.stringify(records));
+    console.log(records);
     logger("INFO", "Count Complete.");
   } catch (e) {
     console.log(e);
@@ -168,7 +168,7 @@ const getPostData = async (relayOfCount: Count, selectedRelays: Relays) => {
     const forText = count !== null ? `${count} posts` : "欠測";
     text += `${relay.name}: ${forText} \n`;
     graph.labels.push(relay.name);
-    graph.counts.push(count ?? NaN);
+    graph.counts.push(count);
   });
   return { text, graph };
 };
@@ -196,17 +196,17 @@ const postIntervalSpeed = async (now: Date, relayOfCount: Count) => {
     text += global.text;
     text += "\n■ 野洲田川定点観測所\n";
     text += "  https://nostr-hotter-site.vercel.app\n\n";
-    text += await generateGraph(
-      jp.graph.labels,
-      jp.graph.counts,
-      `流速計測 ${todayText} ${fromText}～${toText}`,
-    );
-    text += "\n";
-    text += await generateGraph(
-      global.graph.labels,
-      global.graph.counts,
-      `流速計測 ${todayText} ${fromText}～${toText}`,
-    );
+    // text += await generateGraph(
+    //   jp.graph.labels,
+    //   jp.graph.counts,
+    //   `流速計測 ${todayText} ${fromText}～${toText}`,
+    // );
+    // text += "\n";
+    // text += await generateGraph(
+    //   global.graph.labels,
+    //   global.graph.counts,
+    //   `流速計測 ${todayText} ${fromText}～${toText}`,
+    // );
     console.log(text);
     send(text);
   } catch (e) {
@@ -246,3 +246,5 @@ cron.schedule("46 5 * * *", async () => {
   logger("INFO", "RESTART");
   process.exit();
 });
+
+postSystemUp();
