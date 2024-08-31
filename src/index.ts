@@ -1,4 +1,3 @@
-import dotenv from "dotenv";
 import { nip78get, nip78post, send, type Count, count } from "./Nostr.js";
 import { appendWithLimit } from "./utils.js";
 import cron from "node-cron";
@@ -20,10 +19,6 @@ import { logger } from "./log.js";
 const { Chart } = chartPkg;
 
 const MODE_DEV = process.argv.includes("--dev");
-
-dotenv.config();
-const { IMGUR_CLIENT_ID } = process.env;
-registerFont("./font.ttf", { family: "CustomFont" });
 
 const updateChart = async (
   tableName: string,
