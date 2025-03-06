@@ -1,22 +1,10 @@
 import { nip78get, nip78post, send, type Count, count } from "./Nostr.js";
 import { appendWithLimit } from "./utils.js";
 import cron from "node-cron";
-import {
-  format,
-  startOfMinute,
-  subMinutes,
-  getUnixTime,
-  formatISO,
-} from "date-fns";
+import { format, startOfMinute, subMinutes, getUnixTime } from "date-fns";
 import { relays } from "./relays.js";
 import type { Relays } from "./relays.js";
-import axios from "axios";
-import chartPkg, { type ChartItem } from "chart.js";
-import { createCanvas, registerFont } from "canvas";
-import { writeFileSync } from "node:fs";
 import { logger } from "./log.js";
-
-const { Chart } = chartPkg;
 
 const MODE_DEV = process.argv.includes("--dev");
 
@@ -54,104 +42,6 @@ const updateChart = async (
     console.log(e);
   }
   return;
-};
-
-const generateGraph = async (
-  labels: string[],
-  values: number[],
-  title: string,
-) => {
-  const canvas = createCanvas(1200, labels.length * 72 + 100);
-  const ctx: unknown = canvas.getContext("2d");
-
-  const chart = new Chart(ctx as ChartItem, {
-    type: "bar",
-    data: {
-      labels: labels,
-      // datasets: values,
-      datasets: [
-        {
-          label: "",
-          data: values,
-          backgroundColor: "#58B2DC",
-        },
-      ],
-    },
-    options: {
-      indexAxis: "y",
-      responsive: true,
-      font: {
-        family: "CustomFont",
-        size: 32,
-      },
-      plugins: {
-        title: {
-          display: true,
-          text: title,
-          font: {
-            family: "CustomFont",
-            size: 32,
-          },
-        },
-        legend: {
-          display: false,
-        },
-      },
-      scales: {
-        y: {
-          title: {
-            display: false,
-            text: "流速 (posts / 10min)",
-            font: {
-              family: "CustomFont",
-              size: 32,
-            },
-          },
-          ticks: {
-            font: {
-              family: "CustomFont",
-              size: 32,
-            },
-            padding: 40,
-          },
-        },
-      },
-    },
-    plugins: [
-      {
-        id: "customCanvasBackgroundColor",
-        beforeDraw: (chart, args, options) => {
-          const { ctx } = chart;
-          ctx.save();
-          ctx.globalCompositeOperation = "destination-over";
-          ctx.fillStyle = "#ffffff";
-          ctx.fillRect(0, 0, chart.width, chart.height);
-          ctx.restore();
-        },
-      },
-    ],
-  });
-
-  const image = canvas.toBuffer();
-  writeFileSync("./chart.png", image);
-  const imageBase64 = image.toString("base64");
-  chart.destroy();
-
-  // CLIENT_IDなければ画像URLなし
-  if (!IMGUR_CLIENT_ID) return "";
-
-  try {
-    // POST to Imgur
-    const response = await axios.post(
-      "https://api.imgur.com/3/image",
-      { image: imageBase64 },
-      { headers: { Authorization: `Client-ID ${IMGUR_CLIENT_ID}` } },
-    );
-    return response.data.data.link;
-  } catch (err) {
-    logger("ERROR", err);
-    return "";
-  }
 };
 
 const getPostData = async (relayOfCount: Count, selectedRelays: Relays) => {
