@@ -13,55 +13,62 @@ export const relays: Relays = [
     name: "きりの川",
     status: "active",
     url: "wss://relay-jp.nostr.wirednet.jp",
-    target:"jp"
+    target: "jp",
   },
   {
     key: "kirino_g",
     name: "きりの川(G)",
     status: "active",
     url: "wss://relay.nostr.wirednet.jp",
-    target:"all"
+    target: "all",
   },
   {
     key: "takenoko_g",
     name: "のこたろ川(G)",
     status: "active",
     url: "wss://nostr-relay.nokotaro.com",
-    target:"all"
+    target: "all",
   },
   {
     key: "yabumi",
     name: "やぶみ川",
     status: "active",
     url: "wss://yabu.me",
-    target:"jp"
+    target: "jp",
   },
   {
     key: "holybea",
     name: "ほりべあ川",
     status: "active",
     url: "wss://nostr.holybea.com",
-    target:"jp"
+    target: "jp",
   },
   {
     key: "c-stellar",
     name: "かすてら川",
     status: "active",
     url: "wss://nrelay-jp.c-stellar.net",
-    target:"jp"
+    target: "jp",
   },
   {
     key: "kojira",
     name: "こじら川",
     status: "active",
     url: "wss://r.kojira.io",
-    target:"jp"
+    target: "jp",
+  },
+  {
+    key: "kojira",
+    name: "こじら大川",
+    status: "active",
+    url: "wss://x.kojira.io",
+    target: "all",
   },
   {
     key: "shino3",
     name: "しの川",
     status: "active",
     url: "wss://relay-jp.shino3.net",
-    target:"jp"
+    target: "jp",
   },
 ];
