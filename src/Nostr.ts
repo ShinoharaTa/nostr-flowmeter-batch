@@ -161,7 +161,7 @@ export const subscribe = async () => {
           send("コマンド確認して", ev);
         }
       }
-      if (ev.content.match(/^流速ちゃん/)) {
+      if (ev.content.match(/^流速ちゃん？/)) {
         send("呼びましたか？", ev);
       }
     } catch (ex) {
