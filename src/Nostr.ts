@@ -9,7 +9,7 @@ import { fromUnixTime, getUnixTime, startOfMinute, subDays, subMinutes } from "d
 dotenv.config();
 const HEX: string = process.env.HEX ?? "";
 
-const RELAYS = [
+export const RELAYS = [
   "wss://relay-jp.nostr.wirednet.jp",
   "wss://r.kojira.io",
   "wss://yabu.me",
@@ -105,14 +105,41 @@ export const count = async (
   });
   return response;
 };
+export const countPosts = async (
+  relays: string[],
+  targetKinds: number[],
+  start: Date,
+  span: number,
+  authors?: string[],
+): Promise<number> => {
+  const now = startOfMinute(start);
+  const to = getUnixTime(now);
+  const from = getUnixTime(subMinutes(now, span));
+
+  const fetcher = NostrFetcher.init();
+  const response: Count = {};
+  let fetchStats: FetchStats | undefined = undefined;
+
+  const result = await fetcher.fetchAllEvents(
+    relays,
+    { kinds: targetKinds, authors },
+    { since: from, until: to },
+    {
+      sort: true,
+      statsListener: (stats) => {
+        fetchStats = stats;
+      },
+    },
+  );
+  fetcher.shutdown();
+  return result.length;
+};
 
 async function analysePosts(ev: Event) {
   const now = fromUnixTime(ev.created_at)
   try {
-    const yesterdayResult = await count(RELAYS, [1, 6, 42], subDays(now, 1), 1440, [ev.pubkey])
-    const todayResult = await count(RELAYS, [1, 6, 42], now, 1440, [ev.pubkey])
-    const yesterday = yesterdayResult['wss://yabu.me']
-    const today = todayResult['wss://yabu.me']
+    const yesterday = await countPosts(RELAYS, [1, 6, 42], subDays(now, 1), 1440, [ev.pubkey])
+    const today = await countPosts(RELAYS, [1, 6, 42], now, 1440, [ev.pubkey])
     let postText = `直近24時間は ${today} 投稿です。\nその前は ${yesterday} 投稿でした。\n`
 
     const averagePosts = 70; // 普段の平均投稿数の目安
@@ -155,7 +182,7 @@ export const subscribe = async () => {
       const isReply = isReplyToUser(ev);
       if (isReply) {
         const npub = getNpub();
-        if (ev.content.match(new RegExp(`^(nostr:${npub}\\s+)?.*(喋りすぎ|うるさくない).*`))) {
+        if (ev.content.match(new RegExp(`^(nostr:${npub}\\s+)?.*(さわぎすぎ|騒ぎすぎ|しゃべりすぎ|喋りすぎ|うるさくない|うるさすぎ).*`))) {
           await analysePosts(ev);
         } else {
           send("コマンド確認して", ev);

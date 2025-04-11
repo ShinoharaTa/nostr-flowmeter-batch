@@ -1,4 +1,4 @@
-import { nip78get, nip78post, send, type Count, count, subscribe } from "./Nostr.js";
+import { nip78get, nip78post, send, type Count, count, subscribe, countPosts, RELAYS } from "./Nostr.js";
 import { appendWithLimit } from "./utils.js";
 import cron from "node-cron";
 import { format, startOfMinute, subMinutes, getUnixTime } from "date-fns";
