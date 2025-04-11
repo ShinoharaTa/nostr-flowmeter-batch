@@ -157,25 +157,9 @@ export const subscribe = async () => {
         const npub = getNpub();
         if (ev.content.match(new RegExp(`^(nostr:${npub}\\s+)?.*(喋りすぎ|うるさくない).*`))) {
           await analysePosts(ev);
-          // send(`\n\n${calenderUrl}`, ev);
         } else {
           send("コマンド確認して", ev);
         }
-        // } else if (ojisanExists(ev.pubkey)) {
-        //   if (
-        //     ojisan_latest.includes(ev.pubkey) ||
-        //     Math.random() > 0.06 ||
-        //     ev.content.length < 10
-        //   ) {
-        //     // console.log("expire");
-        //     return;
-        //   }
-        //   ojisan_latest = ojisan_latest.slice(0, 10);
-        //   ojisan_latest.push(ev.pubkey);
-        //   const profile = await getUserMeta(ev.pubkey);
-        //   const post = await ojisanClient.reactionToPost(ev.content, profile);
-        //   // console.log(post);
-        //   sendOji(post);
       }
       if (ev.content.match(/^流速ちゃん/)) {
         send("呼びましたか？", ev);
