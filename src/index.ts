@@ -1,4 +1,4 @@
-import { nip78get, nip78post, send, type Count, count } from "./Nostr.js";
+import { nip78get, nip78post, send, type Count, count, subscribe } from "./Nostr.js";
 import { appendWithLimit } from "./utils.js";
 import cron from "node-cron";
 import { format, startOfMinute, subMinutes, getUnixTime } from "date-fns";
@@ -143,3 +143,5 @@ cron.schedule("46 5 * * *", async () => {
 });
 
 postSystemUp();
+
+subscribe().catch(console.error);
