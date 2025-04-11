@@ -1,10 +1,10 @@
 import { currUnixtime } from "./utils.js";
-import { finishEvent, getPublicKey, Kind, SimplePool } from "nostr-tools";
+import { finishEvent, getPublicKey, Kind, nip19, SimplePool } from "nostr-tools";
 import type { Event, EventTemplate } from "nostr-tools";
 import { eventKind, type FetchStats, NostrFetcher } from "nostr-fetch";
 import dotenv from "dotenv";
 import "websocket-polyfill";
-import { getUnixTime, startOfMinute, subMinutes } from "date-fns";
+import { fromUnixTime, getUnixTime, startOfMinute, subDays, subMinutes } from "date-fns";
 
 dotenv.config();
 const HEX: string = process.env.HEX ?? "";
@@ -74,6 +74,7 @@ export const count = async (
   targetKinds: number[],
   start: Date,
   span: number,
+  authors?: string[],
 ): Promise<Count | null> => {
   const now = startOfMinute(start);
   const to = getUnixTime(now);
@@ -85,7 +86,7 @@ export const count = async (
 
   await fetcher.fetchAllEvents(
     relays,
-    { kinds: targetKinds },
+    { kinds: targetKinds, authors },
     { since: from, until: to },
     {
       sort: true,
@@ -103,4 +104,84 @@ export const count = async (
       : null;
   });
   return response;
+};
+
+async function analysePosts(ev: Event) {
+  const now = fromUnixTime(ev.created_at)
+  try {
+    const yesterdayResult = await count(RELAYS, [1, 6, 42], subDays(now, 1), 1440, [ev.pubkey])
+    const todayResult = await count(RELAYS, [1, 6, 42], now, 1440, [ev.pubkey])
+    const yesterday = yesterdayResult['wss://yabu.me']
+    const today = todayResult['wss://yabu.me']
+    let postText = `直近24時間は ${today} 投稿です。\nその前は ${yesterday} 投稿でした。\n`
+
+    const averagePosts = 70; // 普段の平均投稿数の目安
+    const ratio = today / (yesterday || 1); // yesterdayが0の場合を防止
+
+    if (today <= yesterday) {
+      postText += "昨日ほどじゃないね👍️";
+    } else if (ratio >= 1.1 && today > 10) {
+      if (today >= averagePosts * 1.5 && today >= yesterday * 1.5) {
+        postText += "ねえ、多すぎない？😅";
+      } else if (today > averagePosts || today > yesterday * 1.3) {
+        postText += "昨日の投稿数を超えてるよ？大丈夫？😮";
+      } else {
+        postText += "今日はちょっと多めだね😌";
+      }
+    } else if (today <= 5) {
+      postText += "まだ全然書いてないよ！忙しかった？😟";
+    } else {
+      postText += "順調だね！😊";
+    }
+    send(postText, ev);
+  } catch (error) {
+    send("ちょっといま忙しい", ev);
+  }
+  return;
+}
+
+export function isReplyToUser(ev: Event): boolean {
+  return ev.tags.find((tag) => tag.includes("p"))?.[1] === getPublicKey(HEX);
+}
+
+export function getNpub(): string {
+  return nip19.npubEncode(getPublicKey(HEX));
+}
+
+export const subscribe = async () => {
+  const sub = pool.sub(RELAYS, [{ kinds: [1], since: currUnixtime() }]);
+  sub.on("event", async (ev) => {
+    try {
+      const isReply = isReplyToUser(ev);
+      if (isReply) {
+        const npub = getNpub();
+        if (ev.content.match(new RegExp(`^(nostr:${npub}\\s+)?.*(喋りすぎ|うるさくない).*`))) {
+          await analysePosts(ev);
+          // send(`\n\n${calenderUrl}`, ev);
+        } else {
+          send("コマンド確認して", ev);
+        }
+        // } else if (ojisanExists(ev.pubkey)) {
+        //   if (
+        //     ojisan_latest.includes(ev.pubkey) ||
+        //     Math.random() > 0.06 ||
+        //     ev.content.length < 10
+        //   ) {
+        //     // console.log("expire");
+        //     return;
+        //   }
+        //   ojisan_latest = ojisan_latest.slice(0, 10);
+        //   ojisan_latest.push(ev.pubkey);
+        //   const profile = await getUserMeta(ev.pubkey);
+        //   const post = await ojisanClient.reactionToPost(ev.content, profile);
+        //   // console.log(post);
+        //   sendOji(post);
+      }
+      if (ev.content.match(/^流速ちゃん/)) {
+        send("呼びましたか？", ev);
+      }
+    } catch (ex) {
+      console.error(ex);
+    }
+  });
 };
