@@ -42,6 +42,29 @@ export const send = async (
   });
 };
 
+// import { getEventHash, getSignature } from 'nostr-tools';
+
+export const createReactionEvent = async (
+  targetEvent: Event | null = null,
+) => {
+  const ev = {
+    kind: 7,
+    content: "👍️",
+    tags: [
+      ["e", targetEvent.id],
+      ["p", targetEvent.pubkey]
+    ],
+    created_at: Math.floor(Date.now() / 1000),
+  };
+  const post = finishEvent(ev, HEX);
+  return new Promise(() => {
+    const pub = pool.publish(RELAYS, post);
+    pub.on("failed", (ev) => {
+      console.error("failed to send event", ev);
+    });
+  });
+};
+
 export const nip78get = async (storeName: string) => {
   const result = await pool.get(RELAYS, {
     kinds: [eventKind.appSpecificData],
@@ -117,19 +140,11 @@ export const countPosts = async (
   const from = getUnixTime(subMinutes(now, span));
 
   const fetcher = NostrFetcher.init();
-  const response: Count = {};
-  let fetchStats: FetchStats | undefined = undefined;
-
   const result = await fetcher.fetchAllEvents(
     relays,
     { kinds: targetKinds, authors },
     { since: from, until: to },
-    {
-      sort: true,
-      statsListener: (stats) => {
-        fetchStats = stats;
-      },
-    },
+    { sort: true },
   );
   fetcher.shutdown();
   return result.length;
@@ -183,7 +198,8 @@ export const subscribe = async () => {
       if (isReply) {
         const npub = getNpub();
         if (ev.content.match(new RegExp(`^(nostr:${npub}\\s+)?.*(さわぎすぎ|騒ぎすぎ|しゃべりすぎ|喋りすぎ|うるさくない|うるさすぎ).*`))) {
-          await analysePosts(ev);
+          createReactionEvent(ev);
+          analysePosts(ev);
         } else {
           send("コマンド確認して", ev);
         }
