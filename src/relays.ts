@@ -36,13 +36,13 @@ export const relays: Relays = [
     url: "wss://yabu.me",
     target: "jp",
   },
-  {
-    key: "holybea",
-    name: "ほりべあ川",
-    status: "active",
-    url: "wss://nostr.holybea.com",
-    target: "jp",
-  },
+  //{
+  //   key: "holybea",
+  //   name: "ほりべあ川",
+  //   status: "active",
+  //   url: "wss://nostr.holybea.com",
+  //   target: "jp",
+  // },
   {
     key: "c-stellar",
     name: "かすてら川",
