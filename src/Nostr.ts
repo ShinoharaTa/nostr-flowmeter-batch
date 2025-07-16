@@ -167,7 +167,7 @@ export interface CountByKind {
     posts: number;
     reposts: number;
     favs: number;
-  };
+  } | null;
 }
 
 export const countByKind = async (
@@ -185,18 +185,32 @@ export const countByKind = async (
 
   // 各リレーから個別にイベントを取得
   for (const relay of relays) {
+    let fetchStats: FetchStats | undefined = undefined;
+    
     const events = await fetcher.fetchAllEvents(
       [relay],
       { kinds: [1, 6, 7], authors },
       { since: from, until: to },
-      { sort: true }
+      {
+        sort: true,
+        statsListener: (stats) => {
+          fetchStats = stats;
+        },
+      }
     );
 
-    response[relay] = {
-      posts: events.filter(e => e.kind === 1).length,
-      reposts: events.filter(e => e.kind === 6).length,
-      favs: events.filter(e => e.kind === 7).length,
-    };
+    const relay_url = relay.endsWith("/") ? relay : `${relay}/`;
+    const resultStatus = fetchStats?.relays[relay_url]?.status === "completed";
+    
+    if (resultStatus) {
+      response[relay] = {
+        posts: events.filter(e => e.kind === 1).length,
+        reposts: events.filter(e => e.kind === 6).length,
+        favs: events.filter(e => e.kind === 7).length,
+      };
+    } else {
+      response[relay] = null;
+    }
   }
 
   fetcher.shutdown();
