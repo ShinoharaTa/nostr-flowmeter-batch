@@ -18,10 +18,18 @@ export const RELAYS = [
 
 const pool = new SimplePool();
 
+// 投稿抑制フラグ（テスト用）
+export let SUPPRESS_POST = false;
+export function setSuppressPost(val: boolean) { SUPPRESS_POST = val; }
+
 export const send = async (
   content: string,
   targetEvent: Event | null = null,
 ) => {
+  if (SUPPRESS_POST) {
+    console.log('[SUPPRESS_POST] send:', content);
+    return;
+  }
   const created = targetEvent ? targetEvent.created_at + 1 : currUnixtime();
   const ev: EventTemplate<Kind.Text> = {
     kind: Kind.Text,
@@ -75,6 +83,10 @@ export const nip78get = async (storeName: string) => {
 };
 
 export const nip78post = async (storeName: string, content: string) => {
+  if (SUPPRESS_POST) {
+    console.log('[SUPPRESS_POST] nip78post:', storeName, content);
+    return;
+  }
   const tags = [["d", storeName]];
   const ev = {
     kind: eventKind.appSpecificData,
@@ -148,6 +160,47 @@ export const countPosts = async (
   );
   fetcher.shutdown();
   return result.length;
+};
+
+export interface CountByKind {
+  [relay: string]: {
+    posts: number;
+    reposts: number;
+    favs: number;
+  };
+}
+
+export const countByKind = async (
+  relays: string[],
+  start: Date,
+  span: number,
+  authors?: string[],
+): Promise<CountByKind> => {
+  const now = startOfMinute(start);
+  const to = getUnixTime(now);
+  const from = getUnixTime(subMinutes(now, span));
+
+  const fetcher = NostrFetcher.init();
+  const response: CountByKind = {};
+
+  // 各リレーから個別にイベントを取得
+  for (const relay of relays) {
+    const events = await fetcher.fetchAllEvents(
+      [relay],
+      { kinds: [1, 6, 7], authors },
+      { since: from, until: to },
+      { sort: true }
+    );
+
+    response[relay] = {
+      posts: events.filter(e => e.kind === 1).length,
+      reposts: events.filter(e => e.kind === 6).length,
+      favs: events.filter(e => e.kind === 7).length,
+    };
+  }
+
+  fetcher.shutdown();
+  return response;
 };
 
 async function analysePosts(ev: Event) {
