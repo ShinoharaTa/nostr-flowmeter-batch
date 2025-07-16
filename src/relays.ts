@@ -22,13 +22,13 @@ export const relays: Relays = [
     url: "wss://relay.nostr.wirednet.jp",
     target: "all",
   },
-  {
-    key: "takenoko_g",
-    name: "のこたろ川(G)",
-    status: "active",
-    url: "wss://nostr-relay.nokotaro.com",
-    target: "all",
-  },
+  // {
+  //   key: "takenoko_g",
+  //   name: "のこたろ川(G)",
+  //   status: "active",
+  //   url: "wss://nostr-relay.nokotaro.com",
+  //   target: "all",
+  // },
   {
     key: "yabumi",
     name: "やぶみ川",
@@ -36,13 +36,13 @@ export const relays: Relays = [
     url: "wss://yabu.me",
     target: "jp",
   },
-  {
-    key: "holybea",
-    name: "ほりべあ川",
-    status: "active",
-    url: "wss://nostr.holybea.com",
-    target: "jp",
-  },
+  // {
+  //   key: "holybea",
+  //   name: "ほりべあ川",
+  //   status: "active",
+  //   url: "wss://nostr.holybea.com",
+  //   target: "jp",
+  // },
   {
     key: "c-stellar",
     name: "かすてら川",
@@ -69,6 +69,13 @@ export const relays: Relays = [
     name: "しの川",
     status: "active",
     url: "wss://relay-jp.shino3.net",
+    target: "jp",
+  },
+  {
+    key: "shino3",
+    name: "しの川(G)",
+    status: "active",
+    url: "wss://relay.nostx.io",
     target: "jp",
   },
 ];
