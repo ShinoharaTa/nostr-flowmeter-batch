@@ -10,7 +10,8 @@
   "scripts": {
     "build": "tsc",
     "start": "tsc && node --inspect dist/index.js",
-    "dev": "tsc && node dist/index.js --dev"
+    "dev": "tsc && node dist/index.js --dev",
+    "test": "tsc && node dist/index.js --test"
   },
   "dependencies": {
     "@babel/core": "^7.23.7",
