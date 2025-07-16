@@ -1,4 +1,4 @@
-import { nip78get, nip78post, send, type Count, count, subscribe, countPosts, RELAYS } from "./Nostr.js";
+import { nip78get, nip78post, send, type Count, count, subscribe, countPosts, RELAYS, setSuppressPost, countByKind, type CountByKind } from "./Nostr.js";
 import { appendWithLimit } from "./utils.js";
 import cron from "node-cron";
 import { format, startOfMinute, subMinutes, getUnixTime } from "date-fns";
@@ -44,25 +44,30 @@ const updateChart = async (
   return;
 };
 
-const getPostData = async (relayOfCount: Count, selectedRelays: Relays) => {
+const getPostData = async (relayOfCount: CountByKind, selectedRelays: Relays) => {
   const graph = {
     labels: [] as string[],
     counts: [] as number[],
   };
-  const relayUrls: string[] = [];
-  for (const relay of selectedRelays) relayUrls.push(relay.url);
   let text = "";
   selectedRelays.map((relay) => {
     const count = relayOfCount[relay.url];
-    const forText = count !== null ? `${count} posts` : "欠測";
-    text += `${relay.name}: ${forText} \n`;
+    if (count) {
+      const postsText = `${count.posts} posts`;
+      const repostsText = `${count.reposts} reposts`;
+      const favsText = `${count.favs} favs`;
+      text += `${relay.name}: ${postsText}, ${repostsText}, ${favsText} \n`;
+      graph.counts.push(count.posts); // グラフは投稿数のみ
+    } else {
+      text += `${relay.name}: 欠測 \n`;
+      graph.counts.push(0);
+    }
     graph.labels.push(relay.name);
-    graph.counts.push(count);
   });
   return { text, graph };
 };
 
-const postIntervalSpeed = async (now: Date, relayOfCount: Count) => {
+const postIntervalSpeed = async (now: Date, relayOfCount: CountByKind) => {
   try {
     const from = subMinutes(startOfMinute(now), 10);
     const to = startOfMinute(now);
@@ -85,17 +90,6 @@ const postIntervalSpeed = async (now: Date, relayOfCount: Count) => {
     text += global.text;
     text += "\n■ 野洲田川定点観測所\n";
     text += "  https://nostr-hotter-site.vercel.app\n\n";
-    // text += await generateGraph(
-    //   jp.graph.labels,
-    //   jp.graph.counts,
-    //   `流速計測 ${todayText} ${fromText}～${toText}`,
-    // );
-    // text += "\n";
-    // text += await generateGraph(
-    //   global.graph.labels,
-    //   global.graph.counts,
-    //   `流速計測 ${todayText} ${fromText}～${toText}`,
-    // );
     console.log(text);
     send(text);
   } catch (e) {
@@ -120,19 +114,23 @@ const postSystemUp = async () => {
 cron.schedule("*/10 * * * *", async () => {
   const now = startOfMinute(new Date());
   const nowIsoFormat = getUnixTime(now);
-  const countOfRelays = await count(
+  const countOfRelays = await countByKind(
     relays.map((relay) => relay.url),
-    [1],
     new Date(),
     10,
   );
   await postIntervalSpeed(new Date(), countOfRelays);
-  await updateChart("nostr_river_flowmeter", nowIsoFormat, countOfRelays);
+  // チャート用は投稿数のみ
+  const countForChart: Count = {};
+  for (const relay of relays) {
+    countForChart[relay.url] = countOfRelays[relay.url]?.posts || 0;
+  }
+  await updateChart("nostr_river_flowmeter", nowIsoFormat, countForChart);
   const date = format(now, "yyyyMMdd");
   await updateChart(
     `nostr_river_flowmeter_${date}`,
     nowIsoFormat,
-    countOfRelays,
+    countForChart,
   );
 });
 
@@ -145,3 +143,18 @@ cron.schedule("46 5 * * *", async () => {
 postSystemUp();
 
 subscribe().catch(console.error);
+
+// テスト用（一時的に追加）
+if (process.argv.includes('--test')) {
+  setSuppressPost(true);
+  (async () => {
+    const now = startOfMinute(new Date());
+    const countOfRelays = await countByKind(
+      relays.map((relay) => relay.url),
+      new Date(),
+      10,
+    );
+    await postIntervalSpeed(now, countOfRelays);
+    process.exit(0);
+  })();
+}
