@@ -69,13 +69,13 @@ export const relays: Relays = [
     name: "しの川",
     status: "active",
     url: "wss://relay-jp.shino3.net",
-    target: "all",
+    target: "jp",
   },
   {
     key: "shino3",
     name: "しの川(G)",
     status: "active",
     url: "wss://relay.nostx.io",
-    target: "jp",
+    target: "all",
   },
 ];
